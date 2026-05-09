@@ -21,14 +21,13 @@ export const useAppStore = defineStore('app', () => {
   // Public settings cache state
   const publicSettingsLoaded = ref<boolean>(false)
   const publicSettingsLoading = ref<boolean>(false)
-  const siteName = ref<string>('Ikun')
+  const siteName = ref<string>('CloseAI')
   const siteLogo = ref<string>('/logo.png')
   const siteVersion = ref<string>('')
   const contactInfo = ref<string>('')
   const apiBaseUrl = ref<string>('')
   const docUrl = ref<string>('')
   const cachedPublicSettings = ref<PublicSettings | null>(null)
-  let publicSettingsRequest: Promise<PublicSettings | null> | null = null
 
   // Auto-incrementing ID for toasts
   let toastIdCounter = 0
@@ -230,7 +229,7 @@ export const useAppStore = defineStore('app', () => {
       window.__APP_CONFIG__ = { ...config }
     }
     cachedPublicSettings.value = config
-    siteName.value = config.site_name || 'Ikun'
+    siteName.value = config.site_name || 'CloseAI'
     siteLogo.value = config.site_logo || '/logo.png'
     siteVersion.value = config.version || ''
     contactInfo.value = config.contact_info || ''
