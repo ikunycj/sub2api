@@ -26,7 +26,6 @@ func ProvideAdminHandlers(
 	promoHandler *admin.PromoHandler,
 	settingHandler *admin.SettingHandler,
 	opsHandler *admin.OpsHandler,
-	systemHandler *admin.SystemHandler,
 	subscriptionHandler *admin.SubscriptionHandler,
 	usageHandler *admin.UsageHandler,
 	userAttributeHandler *admin.UserAttributeHandler,
@@ -60,7 +59,6 @@ func ProvideAdminHandlers(
 		Promo:                  promoHandler,
 		Setting:                settingHandler,
 		Ops:                    opsHandler,
-		System:                 systemHandler,
 		Subscription:           subscriptionHandler,
 		Usage:                  usageHandler,
 		UserAttribute:          userAttributeHandler,
@@ -76,11 +74,6 @@ func ProvideAdminHandlers(
 		Affiliate:              affiliateHandler,
 		Compliance:             complianceHandler,
 	}
-}
-
-// ProvideSystemHandler creates admin.SystemHandler with UpdateService
-func ProvideSystemHandler(updateService *service.UpdateService, lockService *service.SystemOperationLockService) *admin.SystemHandler {
-	return admin.NewSystemHandler(updateService, lockService)
 }
 
 // ProvideSettingHandler creates SettingHandler with version from BuildInfo
@@ -178,7 +171,6 @@ var ProviderSet = wire.NewSet(
 	admin.NewPromoHandler,
 	ProvideAdminSettingHandler,
 	admin.NewOpsHandler,
-	ProvideSystemHandler,
 	admin.NewSubscriptionHandler,
 	admin.NewUsageHandler,
 	admin.NewUserAttributeHandler,
