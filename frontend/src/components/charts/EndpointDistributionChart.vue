@@ -212,6 +212,13 @@ const toggleBreakdown = async (endpoint: string) => {
 }
 
 const chartColors = [
+  '#3b82f6',
+  '#10b981',
+  '#f59e0b',
+  '#ef4444',
+  '#8b5cf6',
+  '#ec4899',
+  '#c084fc',
   '#f97316',
   '#2563eb',
   '#059669',
