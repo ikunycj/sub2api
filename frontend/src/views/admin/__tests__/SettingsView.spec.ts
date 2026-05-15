@@ -19,6 +19,7 @@ const {
   getGroups,
   listProxies,
   getProviders,
+  getPlans,
   updateProvider,
   createProvider,
   deleteProvider,
@@ -41,6 +42,7 @@ const {
   getGroups: vi.fn(),
   listProxies: vi.fn(),
   getProviders: vi.fn(),
+  getPlans: vi.fn(),
   updateProvider: vi.fn(),
   createProvider: vi.fn(),
   deleteProvider: vi.fn(),
@@ -75,6 +77,7 @@ vi.mock("@/api", () => ({
     },
     payment: {
       getProviders,
+      getPlans,
       updateProvider,
       createProvider,
       deleteProvider,
@@ -386,6 +389,7 @@ const baseSettingsResponse = {
   antigravity_user_agent_version: "",
   openai_codex_user_agent: "",
   payment_enabled: true,
+  payment_display_mode: "payment",
   payment_min_amount: 1,
   payment_max_amount: 10000,
   payment_daily_limit: 50000,
@@ -492,6 +496,7 @@ describe("admin SettingsView payment visible method controls", () => {
     getGroups.mockReset();
     listProxies.mockReset();
     getProviders.mockReset();
+    getPlans.mockReset();
     updateProvider.mockReset();
     createProvider.mockReset();
     deleteProvider.mockReset();
@@ -551,6 +556,7 @@ describe("admin SettingsView payment visible method controls", () => {
     getProviders.mockResolvedValue({
       data: [],
     });
+    getPlans.mockResolvedValue({ data: [] });
     fetchPublicSettings.mockResolvedValue(undefined);
     adminSettingsFetch.mockResolvedValue(undefined);
   });
@@ -811,6 +817,7 @@ describe("admin SettingsView wechat connect controls", () => {
     getGroups.mockReset();
     listProxies.mockReset();
     getProviders.mockReset();
+    getPlans.mockReset();
     updateProvider.mockReset();
     createProvider.mockReset();
     deleteProvider.mockReset();
@@ -873,6 +880,7 @@ describe("admin SettingsView wechat connect controls", () => {
     getProviders.mockResolvedValue({
       data: [],
     });
+    getPlans.mockResolvedValue({ data: [] });
     fetchPublicSettings.mockResolvedValue(undefined);
     adminSettingsFetch.mockResolvedValue(undefined);
   });
