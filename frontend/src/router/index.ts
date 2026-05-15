@@ -14,6 +14,8 @@ import { getSetupStatus } from '@/api/setup'
 import { resolveCompletedSetupRedirectPath } from './setupRedirect'
 import { resolveRouteDocumentTitle } from './title'
 
+type PaymentDisplayMode = 'off' | 'payment' | 'plans'
+
 /**
  * Route definitions with lazy loading
  */
@@ -300,7 +302,8 @@ const routes: RouteRecordRaw[] = [
       title: 'Purchase Subscription',
       titleKey: 'nav.buySubscription',
       descriptionKey: 'purchase.description',
-      requiresPayment: true
+      requiresPayment: true,
+      paymentModes: ['payment', 'plans']
     }
   },
   {
@@ -654,19 +657,6 @@ const routes: RouteRecordRaw[] = [
       requiresPayment: true
     }
   },
-  {
-    path: '/admin/orders/plans',
-    name: 'AdminPaymentPlans',
-    component: () => import('@/views/admin/orders/AdminPaymentPlansView.vue'),
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: true,
-      title: 'Subscription Plans',
-      titleKey: 'nav.paymentPlans',
-      requiresPayment: true
-    }
-  },
-
   // ==================== 404 Not Found ====================
   {
     path: '/:pathMatch(.*)*',
@@ -731,6 +721,14 @@ function isBackendModePublicRouteAllowed(path: string, hasPendingAuthSession: bo
   return false
 }
 
+function resolvePaymentDisplayMode(settings: ReturnType<typeof useAppStore>['cachedPublicSettings']): PaymentDisplayMode {
+  const rawMode = settings?.payment_display_mode
+  if (rawMode === 'payment' || rawMode === 'plans' || rawMode === 'off') {
+    return rawMode
+  }
+  return settings?.payment_enabled ? 'payment' : 'off'
+}
+
 router.beforeEach(async (to, _from, next) => {
   // 开始导航加载状态
   navigationLoading.startNavigation()
@@ -753,7 +751,7 @@ router.beforeEach(async (to, _from, next) => {
     const menuItem = publicItems.find((item) => item.id === id)
       ?? (authStore.isAdmin ? adminSettingsStore.customMenuItems.find((item) => item.id === id) : undefined)
     if (menuItem?.label) {
-      const siteName = appStore.siteName || 'CloseAI'
+      const siteName = appStore.siteName || 'Ikun'
       document.title = `${menuItem.label} - ${siteName}`
     } else {
       document.title = resolveDocumentTitle(to.meta.title, appStore.siteName, to.meta.titleKey as string)
@@ -836,14 +834,13 @@ router.beforeEach(async (to, _from, next) => {
   }
 
 
-  // 公共设置可能尚未加载（App.vue 的 onMounted 异步拉取晚于首次导航，且纯静态部署
-  // 无 __APP_CONFIG__ 注入）。此时 cachedPublicSettings 为空会把 payment/risk_control
-  // 误判为“未启用”而错误拦截，故这里先确保设置加载完成。
-  if ((to.meta.requiresPayment || to.meta.requiresRiskControl) && !appStore.publicSettingsLoaded) {
-    try {
-      await appStore.fetchPublicSettings()
-    } catch (error) {
-      console.warn('Failed to load public settings in route guard', error)
+  // Check payment requirement (internal payment system only)
+  if (to.meta.requiresPayment) {
+    const paymentMode = resolvePaymentDisplayMode(appStore.cachedPublicSettings)
+    const allowedModes = to.meta.paymentModes ?? ['payment']
+    if (paymentMode === 'off' || !allowedModes.includes(paymentMode)) {
+      next(authStore.isAdmin ? '/admin/dashboard' : '/dashboard')
+      return
     }
   }
 

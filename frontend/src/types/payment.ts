@@ -27,6 +27,7 @@ export type OrderType = 'balance' | 'subscription'
 
 export interface PaymentConfig {
   payment_enabled: boolean
+  display_mode: 'off' | 'payment' | 'plans'
   min_amount: number
   max_amount: number
   daily_limit: number
@@ -128,6 +129,9 @@ export interface SubscriptionPlan {
   validity_unit: string
   /** Stored as JSON string in backend; API layer should parse before use */
   features: string[]
+  external_subscribe_enabled?: boolean
+  external_subscribe_url?: string
+  external_subscribe_dialog_text?: string
   for_sale: boolean
   sort_order: number
 }
