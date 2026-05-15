@@ -175,66 +175,6 @@ func TestPaymentHandlerCreatePlanAllowsDialogOnlyExternalSubscribeTarget(t *test
 	require.Equal(t, "联系客服开通", resp.Data.ExternalSubscribeDialogText)
 }
 
-func TestPaymentHandlerCreatePlanAllowsPermanentValidity(t *testing.T) {
-	t.Parallel()
-
-	gin.SetMode(gin.TestMode)
-
-	db, err := sql.Open("sqlite", "file:admin_payment_handler_create_permanent_plan?mode=memory&cache=shared")
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = db.Close() })
-
-	_, err = db.Exec("PRAGMA foreign_keys = ON")
-	require.NoError(t, err)
-
-	drv := entsql.OpenDB(dialect.SQLite, db)
-	client := enttest.NewClient(t, enttest.WithOptions(dbent.Driver(drv)))
-	t.Cleanup(func() { _ = client.Close() })
-
-	handler := NewPaymentHandler(nil, service.NewPaymentConfigService(client, nil, nil))
-	body := `{
-		"group_id": 0,
-		"name": "Permanent Balance Plan",
-		"description": "permanent balance top-up",
-		"price": 88.8,
-		"original_price": 0,
-		"validity_days": 0,
-		"validity_unit": "",
-		"features": "Feature A",
-		"product_name": "",
-		"external_subscribe_enabled": false,
-		"external_subscribe_url": "",
-		"external_subscribe_dialog_text": "",
-		"for_sale": true,
-		"sort_order": 1
-	}`
-
-	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
-	c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/admin/payment/plans", strings.NewReader(body))
-	c.Request.Header.Set("Content-Type", "application/json")
-
-	handler.CreatePlan(c)
-
-	require.Equal(t, http.StatusCreated, recorder.Code, recorder.Body.String())
-
-	var resp struct {
-		Code int `json:"code"`
-		Data struct {
-			GroupID      int64   `json:"group_id"`
-			Price        float64 `json:"price"`
-			ValidityDays int     `json:"validity_days"`
-			ValidityUnit string  `json:"validity_unit"`
-		} `json:"data"`
-	}
-	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &resp))
-	require.Equal(t, 0, resp.Code)
-	require.Equal(t, int64(0), resp.Data.GroupID)
-	require.Equal(t, 88.8, resp.Data.Price)
-	require.Equal(t, 0, resp.Data.ValidityDays)
-	require.Equal(t, "", resp.Data.ValidityUnit)
-}
-
 func TestPaymentHandlerUpdatePlanAllowsDialogOnlyExternalSubscribeTarget(t *testing.T) {
 	t.Parallel()
 

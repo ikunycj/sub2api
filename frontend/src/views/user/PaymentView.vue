@@ -30,8 +30,7 @@
         <!-- Tab content (select phase) -->
         <template v-else>
           <!-- Top-up Tab -->
-          <template v-if="activeTab === 'recharge'">
-            <template v-if="paymentDisplayMode === 'payment' && !checkout.balance_disabled">
+          <template v-if="activeTab === 'recharge' && paymentDisplayMode === 'payment'">
             <!-- Recharge Account Card -->
             <div class="card relative overflow-hidden p-5">
               <div class="pointer-events-none absolute inset-y-0 right-0 w-40 bg-gradient-to-l from-primary-100/60 to-transparent dark:from-primary-900/15"></div>
@@ -203,7 +202,7 @@
               </div>
               <div v-else :class="planGridClass">
                 <SubscriptionPlanCard
-                  v-for="plan in subscriptionPlans"
+                  v-for="plan in checkout.plans"
                   :key="plan.id"
                   :plan="plan"
                   :active-subscriptions="activeSubscriptions"
@@ -537,8 +536,8 @@ const hasSubscriptionTab = computed(() => subscriptionPlans.value.length > 0 || 
 
 const tabs = computed(() => {
   const result: { key: 'recharge' | 'subscription'; label: string }[] = []
-  if (hasBalanceTab.value) result.push({ key: 'recharge', label: t('payment.tabTopUp') })
-  if (hasSubscriptionTab.value) result.push({ key: 'subscription', label: t('payment.tabSubscribe') })
+  if (paymentDisplayMode.value === 'payment' && !checkout.value.balance_disabled) result.push({ key: 'recharge', label: t('payment.tabTopUp') })
+  result.push({ key: 'subscription', label: t('payment.tabSubscribe') })
   return result
 })
 
@@ -1187,8 +1186,8 @@ onMounted(async () => {
       }
     }
     await resumeWechatPaymentFromQuery()
-    if (!tabs.value.some(tab => tab.key === activeTab.value)) {
-      activeTab.value = tabs.value[0]?.key ?? 'subscription'
+    if (paymentDisplayMode.value !== 'payment' || checkout.value.balance_disabled) {
+      activeTab.value = 'subscription'
     }
     // Handle renewal navigation: ?tab=subscription&group=123
     if (paymentDisplayMode.value === 'payment' && route.query.tab === 'subscription') {

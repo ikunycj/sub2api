@@ -27,20 +27,19 @@
         </div>
         <div class="shrink-0 text-right">
           <div class="flex items-baseline gap-1">
-            <span class="text-xs text-gray-400 dark:text-dark-500">¥</span>
+            <span class="text-xs text-gray-400 dark:text-dark-500">$</span>
             <span class="text-2xl font-extrabold tracking-tight text-primary-600 dark:text-primary-300">{{ plan.price }}</span>
           </div>
           <span class="text-[11px] text-gray-400 dark:text-dark-500">{{ priceSuffix }}</span>
           <div v-if="plan.original_price" class="mt-0.5 flex items-center justify-end gap-1.5">
-            <span class="text-xs text-gray-400 line-through dark:text-dark-500">¥{{ plan.original_price }}</span>
+            <span class="text-xs text-gray-400 line-through dark:text-dark-500">${{ plan.original_price }}</span>
             <span class="rounded bg-primary-100 px-1 py-0.5 text-[10px] font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-200">{{ discountText }}</span>
           </div>
         </div>
       </div>
 
       <!-- Group quota info (compact) -->
-      <div v-if="showInfoPanel" class="mb-3 grid grid-cols-2 gap-x-3 gap-y-1 rounded-xl border border-amber-100/70 bg-gradient-to-br from-primary-50/70 to-white px-3 py-2 text-xs dark:border-primary-900/25 dark:from-primary-950/20 dark:to-dark-900/70">
-        <template v-if="showSubscriptionDetails">
+      <div class="mb-3 grid grid-cols-2 gap-x-3 gap-y-1 rounded-xl border border-amber-100/70 bg-gradient-to-br from-primary-50/70 to-white px-3 py-2 text-xs dark:border-primary-900/25 dark:from-primary-950/20 dark:to-dark-900/70">
         <div class="flex items-center justify-between">
           <span class="text-gray-400 dark:text-dark-500">{{ t('payment.planCard.rate') }}</span>
           <span class="font-medium text-gray-700 dark:text-gray-300">{{ rateDisplay }}</span>
@@ -120,7 +119,7 @@
                 </svg>
               </button>
               <div class="relative pr-10">
-                <p class="text-xs font-semibold uppercase tracking-[0.22em] text-primary-100">{{ cardLabel }}</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.22em] text-primary-100">{{ pLabel }}</p>
                 <h3 class="mt-2 text-2xl font-bold">{{ plan.name }}</h3>
                 <p class="mt-2 text-sm leading-relaxed text-primary-50/90">
                   {{ plan.description || t('payment.externalSubscribeDialogFallbackTitle') }}
@@ -139,13 +138,21 @@
                 </p>
               </div>
 
-              <div class="flex justify-end">
+              <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   class="btn btn-secondary"
                   @click="closeExternalDialog"
                 >
                   {{ t('payment.externalSubscribeClose') }}
+                </button>
+                <button
+                  v-if="externalURL"
+                  type="button"
+                  class="btn btn-primary shadow-lg shadow-primary-500/20"
+                  @click="openExternalSubscribeLink"
+                >
+                  {{ t('payment.externalSubscribeContinue') }}
                 </button>
               </div>
             </div>
@@ -169,10 +176,9 @@ import {
   platformLabel,
 } from '@/utils/platformColors'
 
-const props = withDefaults(defineProps<{ plan: SubscriptionPlan; activeSubscriptions?: UserSubscription[]; selectable?: boolean; externalSubscribe?: boolean; buttonMode?: 'subscription' | 'balance' }>(), {
+const props = withDefaults(defineProps<{ plan: SubscriptionPlan; activeSubscriptions?: UserSubscription[]; selectable?: boolean; externalSubscribe?: boolean }>(), {
   selectable: true,
   externalSubscribe: false,
-  buttonMode: 'subscription',
 })
 const emit = defineEmits<{ select: [plan: SubscriptionPlan] }>()
 const { t } = useI18n()
@@ -192,11 +198,6 @@ const subscribeButtonClass = computed(() =>
     : 'bg-primary-500 text-white shadow-md shadow-primary-500/20 hover:bg-primary-600 dark:bg-primary-600 dark:hover:bg-primary-500'
 )
 const pLabel = computed(() => platformLabel(platform.value))
-const isBalanceMode = computed(() => props.buttonMode === 'balance' || props.plan.group_id <= 0)
-const cardLabel = computed(() => isBalanceMode.value ? t('payment.planCard.balanceRecharge') : pLabel.value)
-const priceSuffix = computed(() => isBalanceMode.value ? '' : `/ ${validitySuffix.value}`)
-const showInfoPanel = computed(() => !isBalanceMode.value && planHasSubscriptionInfo.value)
-const showSubscriptionDetails = computed(() => !isBalanceMode.value)
 const externalURL = computed(() => props.plan.external_subscribe_url?.trim() || '')
 const externalDialogText = computed(() => props.plan.external_subscribe_dialog_text?.trim() || '')
 const showExternalDialog = ref(false)
@@ -206,7 +207,6 @@ const showExternalButton = computed(() =>
 const showButton = computed(() => props.selectable || showExternalButton.value)
 const buttonText = computed(() => {
   if (showExternalButton.value) return t('payment.externalSubscribe')
-  if (isBalanceMode.value) return t('payment.rechargeNow')
   return isRenewal.value ? t('payment.renewNow') : t('payment.subscribeNow')
 })
 
@@ -227,7 +227,7 @@ function closeExternalDialog() {
 }
 
 function openExternalSubscribeLink() {
-  if (!externalURL.value || externalDialogText.value) return
+  if (!externalURL.value) return
   showExternalDialog.value = false
   window.open(externalURL.value, '_blank', 'noopener,noreferrer')
 }
