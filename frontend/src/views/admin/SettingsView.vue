@@ -5739,19 +5739,118 @@
               </p>
             </div>
             <div class="space-y-4 p-6">
-              <!-- Enable toggle -->
-              <div class="flex items-center justify-between">
+              <div class="space-y-3">
                 <div>
                   <label class="font-medium text-gray-900 dark:text-white">{{
-                    t("admin.settings.payment.enabled")
+                    t("admin.settings.payment.displayMode")
                   }}</label>
                   <p class="text-sm text-gray-500 dark:text-gray-400">
-                    {{ t("admin.settings.payment.enabledHint") }}
+                    {{ t("admin.settings.payment.displayModeHint") }}
                   </p>
                 </div>
-                <Toggle v-model="form.payment_enabled" />
+                <div class="grid grid-cols-1 gap-2 rounded-lg bg-gray-100 p-1 dark:bg-dark-800 sm:grid-cols-3">
+                  <button
+                    v-for="option in paymentDisplayModeOptions"
+                    :key="option.value"
+                    type="button"
+                    class="rounded-md px-3 py-2 text-sm font-medium transition-colors"
+                    :class="
+                      form.payment_display_mode === option.value
+                        ? 'bg-white text-primary-700 shadow-sm dark:bg-dark-700 dark:text-primary-300'
+                        : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+                    "
+                    @click="setPaymentDisplayMode(option.value)"
+                  >
+                    {{ option.label }}
+                  </button>
+                </div>
               </div>
-              <template v-if="form.payment_enabled">
+              <div
+                v-if="isPaymentPlansMode"
+                class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-200"
+              >
+                {{ t("admin.settings.payment.modePlansHint") }}
+              </div>
+              <div
+                v-if="isPaymentPlansMode"
+                class="space-y-4 rounded-lg border border-gray-200 p-4 dark:border-dark-700"
+              >
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-white">
+                      {{ t("payment.admin.plansPageTitle") }}
+                    </h3>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      {{ t("payment.admin.plansPageDesc") }}
+                    </p>
+                  </div>
+                  <div class="flex gap-2">
+                    <button
+                      type="button"
+                      class="btn btn-secondary btn-sm"
+                      :disabled="paymentPlansLoading"
+                      @click="loadPaymentPlans"
+                    >
+                      <Icon
+                        name="refresh"
+                        size="sm"
+                        :class="paymentPlansLoading ? 'animate-spin' : ''"
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-primary btn-sm"
+                      @click="openPlanEdit(null)"
+                    >
+                      {{ t("payment.admin.createPlan") }}
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  v-if="paymentPlansLoading"
+                  class="flex items-center justify-center py-8 text-sm text-gray-500 dark:text-gray-400"
+                >
+                  <div class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-primary-600"></div>
+                  {{ t("common.loading") }}
+                </div>
+                <div
+                  v-else-if="paymentPlans.length === 0"
+                  class="rounded-lg border border-dashed border-gray-200 py-8 text-center text-sm text-gray-500 dark:border-dark-700 dark:text-gray-400"
+                >
+                  {{ t("payment.noPlans") }}
+                </div>
+                <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div
+                    v-for="plan in paymentPlans"
+                    :key="plan.id"
+                    class="space-y-3"
+                  >
+                    <SubscriptionPlanCard
+                      :plan="plan"
+                      :selectable="false"
+                      external-subscribe
+                    />
+                    <div class="flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        class="btn btn-secondary btn-sm"
+                        @click="openPlanEdit(plan)"
+                      >
+                        {{ t("common.edit") }}
+                      </button>
+                      <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                        <span>{{ t("payment.admin.externalSubscribe") }}</span>
+                        <Toggle
+                          :model-value="plan.external_subscribe_enabled === true"
+                          @update:model-value="togglePlanExternalSubscribe(plan)"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <template v-if="isPaymentFullMode">
                 <!-- Row 1: Product name -->
                 <div class="grid grid-cols-3 gap-3">
                   <div>
@@ -6178,7 +6277,7 @@
 
           <!-- Provider Management -->
           <PaymentProviderList
-            v-if="form.payment_enabled"
+            v-if="isPaymentFullMode"
             :providers="providers"
             :loading="providersLoading"
             :can-create="hasAnyPaymentTypeEnabled"
@@ -6670,6 +6769,14 @@
         @close="showProviderDialog = false"
         @save="handleSaveProvider"
       />
+      <PlanEditDialog
+        :show="showPlanDialog"
+        :plan="editingPlan"
+        :groups="subscriptionGroups"
+        :initial-external-subscribe-enabled="planEditInitialExternalSubscribeEnabled"
+        @close="showPlanDialog = false"
+        @saved="handlePlanSaved"
+      />
       <ConfirmDialog
         :show="showDeleteProviderDialog"
         :title="t('admin.settings.payment.deleteProvider')"
@@ -6709,6 +6816,7 @@ import {
 import type {
   AuthSourceDefaultsState,
   AuthSourceType,
+  PaymentDisplayMode,
   SystemSettings,
   UpdateSettingsRequest,
   DefaultSubscriptionSetting,
@@ -6725,13 +6833,15 @@ import type {
   NotifyEmailEntry,
   Proxy,
 } from "@/types";
-import type { ProviderInstance } from "@/types/payment";
+import type { ProviderInstance, SubscriptionPlan } from "@/types/payment";
 import AppLayout from "@/components/layout/AppLayout.vue";
 import Icon from "@/components/icons/Icon.vue";
 import Select from "@/components/common/Select.vue";
 import ConfirmDialog from "@/components/common/ConfirmDialog.vue";
 import PaymentProviderList from "@/components/payment/PaymentProviderList.vue";
 import PaymentProviderDialog from "@/components/payment/PaymentProviderDialog.vue";
+import SubscriptionPlanCard from "@/components/payment/SubscriptionPlanCard.vue";
+import PlanEditDialog from "@/views/admin/orders/PlanEditDialog.vue";
 import GroupBadge from "@/components/common/GroupBadge.vue";
 import GroupOptionItem from "@/components/common/GroupOptionItem.vue";
 import Toggle from "@/components/common/Toggle.vue";
@@ -6772,6 +6882,11 @@ const paymentMethodsHref = computed(() =>
     ? "https://github.com/Wei-Shaw/sub2api/blob/main/docs/PAYMENT_CN.md#支持的支付方式"
     : "https://github.com/Wei-Shaw/sub2api/blob/main/docs/PAYMENT.md#supported-payment-methods",
 );
+const paymentDisplayModeOptions = computed<Array<{ value: PaymentDisplayMode; label: string }>>(() => [
+  { value: "off", label: t("admin.settings.payment.modeOff") },
+  { value: "payment", label: t("admin.settings.payment.modePayment") },
+  { value: "plans", label: t("admin.settings.payment.modePlans") },
+]);
 
 type SettingsTab =
   | "general"
@@ -7044,6 +7159,7 @@ const form = reactive<SettingsForm>({
   backend_mode_enabled: false,
   hide_ccs_import_button: false,
   payment_enabled: false,
+  payment_display_mode: "off",
   risk_control_enabled: false,
   payment_min_amount: 1,
   payment_max_amount: 10000,
@@ -7222,6 +7338,88 @@ const form = reactive<SettingsForm>({
   // Allow user view error requests
   allow_user_view_error_requests: false,
 });
+
+const isPaymentFullMode = computed(() => form.payment_display_mode === "payment");
+const isPaymentPlansMode = computed(() => form.payment_display_mode === "plans");
+const paymentPlansLoading = ref(false);
+const paymentPlans = ref<SubscriptionPlan[]>([]);
+const showPlanDialog = ref(false);
+const editingPlan = ref<SubscriptionPlan | null>(null);
+const planEditInitialExternalSubscribeEnabled = ref<boolean | undefined>(undefined);
+
+function normalizePaymentPlanFeatures(plan: Omit<SubscriptionPlan, "features"> & { features: string | string[] }): SubscriptionPlan {
+  return {
+    ...plan,
+    features: typeof plan.features === "string"
+      ? plan.features.split("\n").map((feature) => feature.trim()).filter(Boolean)
+      : (plan.features || []),
+  };
+}
+
+async function loadPaymentPlans() {
+  paymentPlansLoading.value = true;
+  try {
+    const res = await adminAPI.payment.getPlans();
+    paymentPlans.value = (res.data || []).map(normalizePaymentPlanFeatures);
+  } catch (err: unknown) {
+    appStore.showError(extractI18nErrorMessage(err, t, "payment.errors", t("common.error")));
+  } finally {
+    paymentPlansLoading.value = false;
+  }
+}
+
+function openPlanEdit(plan: SubscriptionPlan | null, initialExternalSubscribeEnabled?: boolean) {
+  editingPlan.value = plan;
+  planEditInitialExternalSubscribeEnabled.value = initialExternalSubscribeEnabled;
+  showPlanDialog.value = true;
+}
+
+function handlePlanSaved(plan: SubscriptionPlan) {
+  const normalizedPlan = normalizePaymentPlanFeatures(plan);
+  const index = paymentPlans.value.findIndex((item) => item.id === normalizedPlan.id);
+  if (index >= 0) {
+    paymentPlans.value.splice(index, 1, normalizedPlan);
+  } else {
+    paymentPlans.value.push(normalizedPlan);
+  }
+  editingPlan.value = null;
+  planEditInitialExternalSubscribeEnabled.value = undefined;
+  void loadPaymentPlans();
+}
+
+async function togglePlanExternalSubscribe(plan: SubscriptionPlan) {
+  if (
+    !plan.external_subscribe_enabled &&
+    !plan.external_subscribe_url?.trim() &&
+    !plan.external_subscribe_dialog_text?.trim()
+  ) {
+    appStore.showError(t("payment.admin.externalSubscribeTargetRequired"));
+    openPlanEdit(plan, true);
+    return;
+  }
+  try {
+    const response = await adminAPI.payment.updatePlan(plan.id, {
+      external_subscribe_enabled: !plan.external_subscribe_enabled,
+    });
+    const normalizedPlan = normalizePaymentPlanFeatures(response.data);
+    Object.assign(plan, normalizedPlan);
+    await loadPaymentPlans();
+  } catch (err: unknown) {
+    appStore.showError(extractI18nErrorMessage(err, t, "payment.errors", t("common.error")));
+  }
+}
+
+function normalizePaymentDisplayMode(value: unknown, enabled?: boolean): PaymentDisplayMode {
+  if (value === "payment" || value === "plans" || value === "off") {
+    return value;
+  }
+  return enabled ? "payment" : "off";
+}
+
+function setPaymentDisplayMode(mode: PaymentDisplayMode) {
+  form.payment_display_mode = mode;
+  form.payment_enabled = mode === "payment";
+}
 
 const authSourceDefaults = reactive<AuthSourceDefaultsState>(
   buildAuthSourceDefaultsState({}),
@@ -7836,6 +8034,12 @@ async function loadSettings() {
             content_md: doc.content_md || "",
           }))
         : defaultLoginAgreementDocuments();
+    setPaymentDisplayMode(
+      normalizePaymentDisplayMode(
+        settings.payment_display_mode,
+        settings.payment_enabled,
+      ),
+    );
     Object.assign(authSourceDefaults, buildAuthSourceDefaultsState(settings));
     form.default_platform_quotas = normalizePlatformQuotasMap(settings.default_platform_quotas);
     form.backend_mode_enabled = settings.backend_mode_enabled;
@@ -7950,7 +8154,8 @@ async function loadSubscriptionGroups() {
     const groups = await adminAPI.groups.getAll();
     subscriptionGroups.value = groups.filter(
       (group) =>
-        group.subscription_type === "subscription" && group.status === "active",
+        group.status === "active" &&
+        group.subscription_type === "subscription",
     );
   } catch (_error: unknown) {
     subscriptionGroups.value = [];
@@ -8314,7 +8519,8 @@ async function saveSettings() {
         form.openai_codex_user_agent?.trim() || "",
       openai_allow_claude_code_codex_plugin: form.openai_allow_claude_code_codex_plugin,
       // Payment configuration
-      payment_enabled: form.payment_enabled,
+      payment_enabled: form.payment_display_mode === "payment",
+      payment_display_mode: form.payment_display_mode,
       risk_control_enabled: form.risk_control_enabled,
       payment_min_amount: Number(form.payment_min_amount) || 0,
       payment_max_amount: Number(form.payment_max_amount) || 0,
@@ -8397,8 +8603,21 @@ async function saveSettings() {
     appendAuthSourceDefaultsToUpdateRequest(payload, authSourceDefaults);
 
     const updated = await adminAPI.settings.updateSettings(payload);
+    setPaymentDisplayMode(
+      normalizePaymentDisplayMode(
+        updated.payment_display_mode,
+        updated.payment_enabled,
+      ),
+    );
+    adminSettingsStore.setPaymentDisplayModeLocal(
+      normalizePaymentDisplayMode(
+        updated.payment_display_mode,
+        updated.payment_enabled,
+      ),
+    );
     for (const [key, value] of Object.entries(updated)) {
       if (key === "openai_fast_policy_settings") continue;
+      if (key === "payment_enabled" || key === "payment_display_mode") continue;
       if (value !== null && value !== undefined) {
         (form as Record<string, unknown>)[key] = value;
       }
@@ -9276,6 +9495,7 @@ async function handleDeleteProvider() {
 onMounted(() => {
   loadSettings();
   loadSubscriptionGroups();
+  loadPaymentPlans();
   loadAdminApiKey();
   loadOverloadCooldownSettings();
   loadRateLimit429CooldownSettings();
