@@ -76,6 +76,7 @@ func provideCleanup(
 	opsAggregation *service.OpsAggregationService,
 	opsAlertEvaluator *service.OpsAlertEvaluatorService,
 	opsCleanup *service.OpsCleanupService,
+	aiStudioCleanup *service.AIStudioCleanupService,
 	opsScheduledReport *service.OpsScheduledReportService,
 	opsSystemLogSink *service.OpsSystemLogSink,
 	schedulerSnapshot *service.SchedulerSnapshotService,
@@ -119,6 +120,12 @@ func provideCleanup(
 			{"OpsCleanupService", func() error {
 				if opsCleanup != nil {
 					opsCleanup.Stop()
+				}
+				return nil
+			}},
+			{"AIStudioCleanupService", func() error {
+				if aiStudioCleanup != nil {
+					aiStudioCleanup.Stop()
 				}
 				return nil
 			}},

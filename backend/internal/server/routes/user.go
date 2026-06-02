@@ -76,6 +76,19 @@ func RegisterUserRoutes(
 			channels.GET("/available", h.AvailableChannel.List)
 		}
 
+		// AI Studio 对话与生图
+		aiStudio := authenticated.Group("/ai-studio")
+		{
+			aiStudio.GET("/key-options", h.AIStudio.ListKeyOptions)
+			aiStudio.GET("/conversations", h.AIStudio.ListConversations)
+			aiStudio.GET("/conversations/:id", h.AIStudio.GetConversation)
+			aiStudio.PATCH("/conversations/:id", h.AIStudio.UpdateConversation)
+			aiStudio.DELETE("/conversations/:id", h.AIStudio.DeleteConversation)
+			aiStudio.POST("/attachments", h.AIStudio.UploadAttachment)
+			aiStudio.GET("/attachments/:id/content", h.AIStudio.GetAttachmentContent)
+			aiStudio.POST("/runs", h.AIStudio.Run)
+		}
+
 		// 使用记录
 		usage := authenticated.Group("/usage")
 		{

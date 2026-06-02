@@ -237,6 +237,30 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/ai-studio',
+    name: 'AIStudio',
+    component: () => import('@/views/user/AIStudioView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'AI Studio',
+      titleKey: 'aiStudio.title',
+      descriptionKey: 'aiStudio.description'
+    }
+  },
+  {
+    path: '/ai-studio/:mode(chat|image)',
+    name: 'AIStudioConversation',
+    component: () => import('@/views/user/AIStudioView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'AI Studio',
+      titleKey: 'aiStudio.title',
+      descriptionKey: 'aiStudio.description'
+    }
+  },
+  {
     path: '/subscriptions',
     name: 'Subscriptions',
     component: () => import('@/views/user/SubscriptionsView.vue'),

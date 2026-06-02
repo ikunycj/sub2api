@@ -474,6 +474,8 @@ var ProviderSet = wire.NewSet(
 	ProvideOpsAggregationService,
 	ProvideOpsAlertEvaluatorService,
 	ProvideOpsCleanupService,
+	NewAIStudioService,
+	ProvideAIStudioCleanupService,
 	ProvideOpsScheduledReportService,
 	NewEmailService,
 	ProvideEmailQueueService,
