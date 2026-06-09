@@ -27,8 +27,7 @@ func TestValidatePlanRequired_WhitespaceName(t *testing.T) {
 
 func TestValidatePlanRequired_ZeroGroupID(t *testing.T) {
 	err := validatePlanRequired("Pro", 0, 9.99, 30, "days", nil)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "group")
+	require.NoError(t, err)
 }
 
 func TestValidatePlanRequired_NegativeGroupID(t *testing.T) {
@@ -149,6 +148,11 @@ func TestValidatePlanPatch_ValidName(t *testing.T) {
 
 func TestValidatePlanPatch_ZeroGroupID(t *testing.T) {
 	err := validatePlanPatch(UpdatePlanRequest{GroupID: ptrInt64(0)})
+	require.NoError(t, err)
+}
+
+func TestValidatePlanPatch_NegativeGroupID(t *testing.T) {
+	err := validatePlanPatch(UpdatePlanRequest{GroupID: ptrInt64(-1)})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "group")
 }

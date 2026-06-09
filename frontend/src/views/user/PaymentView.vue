@@ -30,7 +30,8 @@
         <!-- Tab content (select phase) -->
         <template v-else>
           <!-- Top-up Tab -->
-          <template v-if="activeTab === 'recharge' && paymentDisplayMode === 'payment'">
+          <template v-if="activeTab === 'recharge'">
+            <template v-if="paymentDisplayMode === 'payment' && !checkout.balance_disabled">
             <!-- Recharge Account Card -->
             <div class="card relative overflow-hidden p-5">
               <div class="pointer-events-none absolute inset-y-0 right-0 w-40 bg-gradient-to-l from-primary-100/60 to-transparent dark:from-primary-900/15"></div>
@@ -89,6 +90,22 @@
               <span v-else>{{ t('payment.createOrder') }} {{ formatSelectedPaymentAmount(totalAmount) }}</span>
             </button>
             </template>
+            </template>
+            <div v-if="balancePlans.length > 0" :class="[balancePlanGridClass, paymentDisplayMode === 'payment' && !checkout.balance_disabled ? 'mt-6' : '']">
+              <SubscriptionPlanCard
+                v-for="plan in balancePlans"
+                :key="plan.id"
+                :plan="plan"
+                :selectable="paymentDisplayMode === 'payment' && enabledMethods.length > 0"
+                :external-subscribe="paymentDisplayMode === 'plans'"
+                button-mode="balance"
+                @select="selectBalancePlan"
+              />
+            </div>
+            <div v-else-if="paymentDisplayMode !== 'payment' || checkout.balance_disabled" class="card py-16 text-center">
+              <Icon name="gift" size="xl" class="mx-auto mb-3 text-gray-300 dark:text-dark-600" />
+              <p class="text-gray-500 dark:text-gray-400">{{ t('payment.noBalancePlans') }}</p>
+            </div>
           </template>
           <!-- Subscribe Tab -->
           <template v-else-if="activeTab === 'subscription'">
@@ -174,13 +191,13 @@
             </template>
             <!-- Plan list -->
             <template v-else>
-              <div v-if="checkout.plans.length === 0" class="card py-16 text-center">
+              <div v-if="subscriptionPlans.length === 0" class="card py-16 text-center">
                 <Icon name="gift" size="xl" class="mx-auto mb-3 text-gray-300 dark:text-dark-600" />
                 <p class="text-gray-500 dark:text-gray-400">{{ t('payment.noPlans') }}</p>
               </div>
               <div v-else :class="planGridClass">
                 <SubscriptionPlanCard
-                  v-for="plan in checkout.plans"
+                  v-for="plan in subscriptionPlans"
                   :key="plan.id"
                   :plan="plan"
                   :active-subscriptions="activeSubscriptions"
@@ -496,10 +513,17 @@ const checkout = ref<CheckoutInfoResponse>({
   plans: [], balance_disabled: false, balance_recharge_multiplier: 1, recharge_fee_rate: 0, help_text: '', help_image_url: '', stripe_publishable_key: '',
 })
 
+const balancePlans = computed(() => checkout.value.plans.filter(plan => plan.group_id <= 0))
+const subscriptionPlans = computed(() => checkout.value.plans.filter(plan => plan.group_id > 0))
+const hasBalanceTab = computed(() =>
+  (paymentDisplayMode.value === 'payment' && !checkout.value.balance_disabled) || balancePlans.value.length > 0
+)
+const hasSubscriptionTab = computed(() => subscriptionPlans.value.length > 0 || !hasBalanceTab.value)
+
 const tabs = computed(() => {
   const result: { key: 'recharge' | 'subscription'; label: string }[] = []
-  if (paymentDisplayMode.value === 'payment' && !checkout.value.balance_disabled) result.push({ key: 'recharge', label: t('payment.tabTopUp') })
-  result.push({ key: 'subscription', label: t('payment.tabSubscribe') })
+  if (hasBalanceTab.value) result.push({ key: 'recharge', label: t('payment.tabTopUp') })
+  if (hasSubscriptionTab.value) result.push({ key: 'subscription', label: t('payment.tabSubscribe') })
   return result
 })
 
@@ -514,7 +538,13 @@ const creditedAmount = computed(() => Math.round((validAmount.value * balanceRec
 
 // Adaptive grid: center single card, 2-col for 2 plans, 3-col for 3+
 const planGridClass = computed(() => {
-  const n = checkout.value.plans.length
+  const n = subscriptionPlans.value.length
+  if (n <= 2) return 'grid grid-cols-1 gap-5 sm:grid-cols-2'
+  return 'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3'
+})
+
+const balancePlanGridClass = computed(() => {
+  const n = balancePlans.value.length
   if (n <= 2) return 'grid grid-cols-1 gap-5 sm:grid-cols-2'
   return 'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3'
 })
@@ -652,7 +682,7 @@ const showRenewalModal = ref(false)
 const renewGroupId = ref<number | null>(null)
 const renewalPlans = computed(() => {
   if (renewGroupId.value == null) return []
-  return checkout.value.plans.filter(p => p.group_id === renewGroupId.value)
+  return subscriptionPlans.value.filter(p => p.group_id === renewGroupId.value)
 })
 
 const planValiditySuffix = computed(() => {
@@ -667,6 +697,19 @@ function selectPlan(plan: SubscriptionPlan) {
   if (paymentDisplayMode.value !== 'payment') return
   selectedPlan.value = plan
   errorMessage.value = ''
+}
+
+async function selectBalancePlan(plan: SubscriptionPlan) {
+  if (paymentDisplayMode.value !== 'payment' || submitting.value) return
+  if (!amountFitsMethod(plan.price, selectedMethod.value)) {
+    const available = enabledMethods.value.find((m) => amountFitsMethod(plan.price, m))
+    if (!available) {
+      appStore.showError(t('payment.amountNoMethod'))
+      return
+    }
+    selectedMethod.value = available
+  }
+  await createOrder(plan.price, 'balance', plan.id)
 }
 
 function selectPlanFromModal(plan: SubscriptionPlan) {
@@ -999,10 +1042,12 @@ async function resumeWechatPaymentFromQuery() {
 
   selectedMethod.value = resume.paymentType
   if (resume.orderType === 'balance' && resume.orderAmount > 0) {
+    activeTab.value = 'recharge'
     amount.value = resume.orderAmount
   }
   if (resume.orderType === 'subscription' && resume.planId) {
-    selectedPlan.value = checkout.value.plans.find(plan => plan.id === resume.planId) ?? null
+    activeTab.value = 'subscription'
+    selectedPlan.value = subscriptionPlans.value.find(plan => plan.id === resume.planId) ?? null
   }
 
   await router.replace({ path: route.path, query: stripWechatResumeQuery(route.query) })
@@ -1063,15 +1108,15 @@ onMounted(async () => {
       }
     }
     await resumeWechatPaymentFromQuery()
-    if (paymentDisplayMode.value !== 'payment' || checkout.value.balance_disabled) {
-      activeTab.value = 'subscription'
+    if (!tabs.value.some(tab => tab.key === activeTab.value)) {
+      activeTab.value = tabs.value[0]?.key ?? 'subscription'
     }
     // Handle renewal navigation: ?tab=subscription&group=123
     if (paymentDisplayMode.value === 'payment' && route.query.tab === 'subscription') {
       activeTab.value = 'subscription'
       if (route.query.group) {
         const groupId = Number(route.query.group)
-        const groupPlans = checkout.value.plans.filter(p => p.group_id === groupId)
+        const groupPlans = subscriptionPlans.value.filter(p => p.group_id === groupId)
         if (groupPlans.length === 1) {
           selectedPlan.value = groupPlans[0]
         } else if (groupPlans.length > 1) {

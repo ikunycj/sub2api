@@ -35,6 +35,23 @@ describe('parseWechatResumeRoute', () => {
       planId: undefined,
     })
   })
+
+  it('keeps balance order type when a balance top-up plan id is present', () => {
+    expect(parseWechatResumeRoute({
+      wechat_resume: '1',
+      openid: 'openid-123',
+      payment_type: 'wxpay',
+      amount: '50',
+      order_type: 'balance',
+      plan_id: '9',
+    }, [], 88)).toEqual({
+      openid: 'openid-123',
+      paymentType: 'wxpay',
+      orderType: 'balance',
+      orderAmount: 50,
+      planId: 9,
+    })
+  })
 })
 
 describe('stripWechatResumeQuery', () => {
