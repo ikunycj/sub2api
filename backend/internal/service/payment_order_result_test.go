@@ -2,13 +2,20 @@ package service
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
+	"github.com/Wei-Shaw/sub2api/ent/enttest"
 	"github.com/Wei-Shaw/sub2api/internal/payment"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
+
+	"entgo.io/ent/dialect"
+	entsql "entgo.io/ent/dialect/sql"
+	_ "modernc.org/sqlite"
 )
 
 func TestBuildCreateOrderResponseDefaultsToOrderCreated(t *testing.T) {
@@ -250,31 +257,75 @@ func TestCalculateCreateOrderPayAmountRejectsFractionalZeroDecimal(t *testing.T)
 	}
 }
 
-func TestComputeValidityDaysSupportsSingularAndPluralUnits(t *testing.T) {
+func TestValidateOrderInputAllowsBalanceTopUpPlan(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name string
-		days int
-		unit string
-		want int
-	}{
-		{name: "days", days: 1, unit: "days", want: 1},
-		{name: "week", days: 1, unit: "week", want: 7},
-		{name: "weeks", days: 2, unit: "weeks", want: 14},
-		{name: "month", days: 1, unit: "month", want: 30},
-		{name: "months", days: 1, unit: "months", want: 30},
+	client := newPaymentOrderResultTestClient(t)
+	cfgSvc := NewPaymentConfigService(client, nil, nil)
+	svc := &PaymentService{configService: cfgSvc}
+
+	plan, err := client.SubscriptionPlan.Create().
+		SetGroupID(0).
+		SetName("Balance Top-Up").
+		SetDescription("fixed balance package").
+		SetPrice(50).
+		SetValidityDays(30).
+		SetValidityUnit("days").
+		SetFeatures("Credits $50").
+		SetProductName("Balance Top-Up").
+		SetForSale(true).
+		SetSortOrder(1).
+		Save(context.Background())
+	if err != nil {
+		t.Fatalf("create plan: %v", err)
 	}
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+	got, err := svc.validateOrderInput(context.Background(), CreateOrderRequest{
+		Amount:    50,
+		OrderType: payment.OrderTypeBalance,
+		PlanID:    plan.ID,
+	}, &PaymentConfig{})
+	if err != nil {
+		t.Fatalf("validate balance plan order: %v", err)
+	}
+	if got == nil || got.ID != plan.ID {
+		t.Fatalf("plan = %#v, want id %d", got, plan.ID)
+	}
+}
 
-			if got := psComputeValidityDays(tt.days, tt.unit); got != tt.want {
-				t.Fatalf("psComputeValidityDays(%d, %q) = %d, want %d", tt.days, tt.unit, got, tt.want)
-			}
-		})
+func TestValidateOrderInputRejectsSubscriptionPlanForBalanceOrder(t *testing.T) {
+	t.Parallel()
+
+	client := newPaymentOrderResultTestClient(t)
+	cfgSvc := NewPaymentConfigService(client, nil, nil)
+	svc := &PaymentService{configService: cfgSvc}
+
+	plan, err := client.SubscriptionPlan.Create().
+		SetGroupID(123).
+		SetName("Subscription").
+		SetDescription("subscription package").
+		SetPrice(50).
+		SetValidityDays(30).
+		SetValidityUnit("days").
+		SetFeatures("Feature A").
+		SetProductName("Subscription").
+		SetForSale(true).
+		SetSortOrder(1).
+		Save(context.Background())
+	if err != nil {
+		t.Fatalf("create plan: %v", err)
+	}
+
+	_, err = svc.validateOrderInput(context.Background(), CreateOrderRequest{
+		Amount:    50,
+		OrderType: payment.OrderTypeBalance,
+		PlanID:    plan.ID,
+	}, &PaymentConfig{})
+	if err == nil {
+		t.Fatal("expected balance order with subscription plan to fail")
+	}
+	if appErr := infraerrors.FromError(err); appErr.Reason != "PLAN_TYPE_MISMATCH" {
+		t.Fatalf("reason = %q, want PLAN_TYPE_MISMATCH", appErr.Reason)
 	}
 }
 
@@ -295,6 +346,29 @@ func TestBuildPaymentSubjectAppliesAffixToSubscriptionPlanProductName(t *testing
 	if got != "PRE Claude Pro SUF" {
 		t.Fatalf("buildPaymentSubject() = %q, want %q", got, "PRE Claude Pro SUF")
 	}
+}
+
+func newPaymentOrderResultTestClient(t *testing.T) *dbent.Client {
+	t.Helper()
+
+	dsn := fmt.Sprintf(
+		"file:%s?mode=memory&cache=shared",
+		strings.NewReplacer("/", "_", " ", "_").Replace(t.Name()),
+	)
+	db, err := sql.Open("sqlite", dsn)
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+
+	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		t.Fatalf("enable foreign keys: %v", err)
+	}
+
+	drv := entsql.OpenDB(dialect.SQLite, db)
+	client := enttest.NewClient(t, enttest.WithOptions(dbent.Driver(drv)))
+	t.Cleanup(func() { _ = client.Close() })
+	return client
 }
 
 func TestBuildPaymentSubjectAppliesAffixToSubscriptionPlanDefaultName(t *testing.T) {

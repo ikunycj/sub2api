@@ -71,12 +71,12 @@ func (h *PaymentHandler) GetPlans(c *gin.Context) {
 	groupInfo := h.configService.GetGroupInfoMap(c.Request.Context(), plans)
 	result := make([]planWithPlatform, 0, len(plans))
 	for _, p := range plans {
-		gi := groupInfo[p.GroupID]
+		groupPlatform := platformMap[p.GroupID]
+		if p.GroupID <= 0 {
+			groupPlatform = "balance"
+		}
 		result = append(result, planWithPlatform{
-			ID: int64(p.ID), GroupID: p.GroupID,
-			GroupPlatform: gi.Platform, GroupName: gi.Name,
-			RateMultiplier: gi.RateMultiplier, PeakRateEnabled: gi.PeakRateEnabled,
-			PeakStart: gi.PeakStart, PeakEnd: gi.PeakEnd, PeakRateMultiplier: gi.PeakRateMultiplier,
+			ID: int64(p.ID), GroupID: p.GroupID, GroupPlatform: groupPlatform,
 			Name: p.Name, Description: p.Description, Price: p.Price, OriginalPrice: p.OriginalPrice,
 			ValidityDays: p.ValidityDays, ValidityUnit: p.ValidityUnit, Features: p.Features,
 			ProductName: p.ProductName, ExternalSubscribeEnabled: p.ExternalSubscribeEnabled,
@@ -113,6 +113,13 @@ func (h *PaymentHandler) GetCheckoutInfo(c *gin.Context) {
 	planList := make([]checkoutPlan, 0, len(plans))
 	for _, p := range plans {
 		gi := groupInfo[p.GroupID]
+		if p.GroupID <= 0 {
+			gi = service.PlanGroupInfo{
+				Platform:       "balance",
+				Name:           "Balance Top-Up",
+				RateMultiplier: 1,
+			}
+		}
 		planList = append(planList, checkoutPlan{
 			ID: int64(p.ID), GroupID: p.GroupID,
 			GroupPlatform: gi.Platform, GroupName: gi.Name,

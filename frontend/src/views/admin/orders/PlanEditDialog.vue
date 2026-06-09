@@ -7,8 +7,8 @@
           <input v-model="planForm.name" type="text" class="input" required />
         </div>
         <div>
-          <label class="input-label">{{ t('payment.admin.group') }} <span class="text-red-500">*</span></label>
-          <Select v-model="planForm.group_id" :options="groupOptions" :placeholder="t('payment.admin.selectGroup')" class="w-full">
+          <label class="input-label">{{ t('payment.admin.group') }}</label>
+          <Select v-model="planForm.group_id" :options="groupOptions" :placeholder="t('payment.admin.selectGroup')" clearable class="w-full">
             <template #selected="{ option }">
               <span v-if="option?.platform" :class="platformTextClass(String(option.platform))">{{ option.label }}</span>
               <span v-else>{{ option?.label || t('payment.admin.selectGroup') }}</span>
@@ -19,6 +19,7 @@
               <Icon v-if="selected" name="check" size="sm" class="text-primary-500" :stroke-width="2" />
             </template>
           </Select>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('payment.admin.groupOptionalHint') }}</p>
         </div>
       </div>
 
@@ -253,7 +254,7 @@ function buildPlanPayload() {
     : ''
   return {
     name: planForm.name,
-    group_id: planForm.group_id,
+    group_id: planForm.group_id || 0,
     description: planForm.description,
     price: planForm.price,
     original_price: planForm.original_price || 0,
@@ -269,10 +270,6 @@ function buildPlanPayload() {
 }
 
 async function handleSavePlan() {
-  if (!planForm.group_id) {
-    appStore.showError(t('payment.admin.groupRequired'))
-    return
-  }
   if (!planForm.price || planForm.price <= 0) {
     appStore.showError(t('payment.admin.priceRequired'))
     return

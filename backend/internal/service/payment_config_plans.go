@@ -17,7 +17,7 @@ func validatePlanRequired(name string, groupID int64, price float64, validityDay
 	if strings.TrimSpace(name) == "" {
 		return infraerrors.BadRequest("PLAN_NAME_REQUIRED", "plan name is required")
 	}
-	if groupID <= 0 {
+	if groupID < 0 {
 		return infraerrors.BadRequest("PLAN_GROUP_REQUIRED", "group is required")
 	}
 	if price <= 0 {
@@ -108,7 +108,7 @@ func validatePlanPatch(req UpdatePlanRequest) error {
 	if req.Name != nil && strings.TrimSpace(*req.Name) == "" {
 		return infraerrors.BadRequest("PLAN_NAME_REQUIRED", "plan name is required")
 	}
-	if req.GroupID != nil && *req.GroupID <= 0 {
+	if req.GroupID != nil && *req.GroupID < 0 {
 		return infraerrors.BadRequest("PLAN_GROUP_REQUIRED", "group is required")
 	}
 	if req.Price != nil && *req.Price <= 0 {
@@ -148,6 +148,9 @@ func (s *PaymentConfigService) GetGroupInfoMap(ctx context.Context, plans []*dbe
 	ids := make([]int64, 0, len(plans))
 	seen := make(map[int64]bool)
 	for _, p := range plans {
+		if p.GroupID <= 0 {
+			continue
+		}
 		if !seen[p.GroupID] {
 			seen[p.GroupID] = true
 			ids = append(ids, p.GroupID)
@@ -191,8 +194,10 @@ func (s *PaymentConfigService) CreatePlan(ctx context.Context, req CreatePlanReq
 	if err := validatePlanRequired(req.Name, req.GroupID, req.Price, req.ValidityDays, req.ValidityUnit, req.OriginalPrice); err != nil {
 		return nil, err
 	}
-	if err := s.validatePlanGroupType(ctx, req.GroupID); err != nil {
-		return nil, err
+	if req.GroupID > 0 {
+		if err := s.validatePlanGroupType(ctx, req.GroupID); err != nil {
+			return nil, err
+		}
 	}
 	if err := validateExternalSubscribeTarget(req.ExternalSubscribeEnabled, req.ExternalSubscribeURL, req.ExternalSubscribeDialogText); err != nil {
 		return nil, err
@@ -220,7 +225,7 @@ func (s *PaymentConfigService) UpdatePlan(ctx context.Context, id int64, req Upd
 	}
 	// Only validate explicit group reassignment so legacy invalid plans can still
 	// be disabled or repaired without being trapped by unrelated field edits.
-	if req.GroupID != nil {
+	if req.GroupID != nil && *req.GroupID > 0 {
 		if err := s.validatePlanGroupType(ctx, *req.GroupID); err != nil {
 			return nil, err
 		}

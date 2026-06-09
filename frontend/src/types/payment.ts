@@ -109,6 +109,7 @@ export interface PaymentOrder {
 
 export interface SubscriptionPlan {
   id: number
+  /** 0 means this plan is a fixed balance top-up package instead of a subscription package. */
   group_id: number
   group_platform?: string
   group_name?: string
