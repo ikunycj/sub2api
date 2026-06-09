@@ -137,21 +137,13 @@
                 </p>
               </div>
 
-              <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <div class="flex justify-end">
                 <button
                   type="button"
                   class="btn btn-secondary"
                   @click="closeExternalDialog"
                 >
                   {{ t('payment.externalSubscribeClose') }}
-                </button>
-                <button
-                  v-if="externalURL"
-                  type="button"
-                  class="btn btn-primary shadow-lg shadow-primary-500/20"
-                  @click="openExternalSubscribeLink"
-                >
-                  {{ t('payment.externalSubscribeContinue') }}
                 </button>
               </div>
             </div>
@@ -226,7 +218,7 @@ function closeExternalDialog() {
 }
 
 function openExternalSubscribeLink() {
-  if (!externalURL.value) return
+  if (!externalURL.value || externalDialogText.value) return
   showExternalDialog.value = false
   window.open(externalURL.value, '_blank', 'noopener,noreferrer')
 }
