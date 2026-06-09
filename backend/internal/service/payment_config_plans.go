@@ -188,8 +188,10 @@ func (s *PaymentConfigService) CreatePlan(ctx context.Context, req CreatePlanReq
 	if err := validatePlanRequired(req.Name, req.GroupID, req.Price, req.ValidityDays, req.ValidityUnit, req.OriginalPrice); err != nil {
 		return nil, err
 	}
-	if err := s.validatePlanGroupType(ctx, req.GroupID); err != nil {
-		return nil, err
+	if req.GroupID > 0 {
+		if err := s.validatePlanGroupType(ctx, req.GroupID); err != nil {
+			return nil, err
+		}
 	}
 	if err := validateExternalSubscribeTarget(req.ExternalSubscribeEnabled, req.ExternalSubscribeURL, req.ExternalSubscribeDialogText); err != nil {
 		return nil, err
@@ -217,7 +219,7 @@ func (s *PaymentConfigService) UpdatePlan(ctx context.Context, id int64, req Upd
 	}
 	// Only validate explicit group reassignment so legacy invalid plans can still
 	// be disabled or repaired without being trapped by unrelated field edits.
-	if req.GroupID != nil {
+	if req.GroupID != nil && *req.GroupID > 0 {
 		if err := s.validatePlanGroupType(ctx, *req.GroupID); err != nil {
 			return nil, err
 		}

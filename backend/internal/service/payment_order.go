@@ -136,9 +136,6 @@ func (s *PaymentService) validateBalanceOrder(ctx context.Context, req CreateOrd
 		if plan.GroupID > 0 {
 			return nil, infraerrors.BadRequest("PLAN_TYPE_MISMATCH", "balance order requires a balance top-up plan")
 		}
-		if plan.Price <= 0 {
-			return nil, infraerrors.BadRequest("PLAN_AMOUNT_INVALID", "balance top-up plan amount must be > 0")
-		}
 		return plan, nil
 	}
 	if cfg.BalanceDisabled {
