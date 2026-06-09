@@ -68,6 +68,29 @@ func TestCreatePlanRejectsStandardGroup(t *testing.T) {
 	require.ErrorIs(t, err, ErrGroupNotSubscriptionType)
 }
 
+func TestCreatePlanAllowsBalanceTopUpPlanWithoutGroup(t *testing.T) {
+	t.Parallel()
+
+	svc := newPaymentConfigPlansTestService(t)
+	ctx := context.Background()
+
+	plan, err := svc.CreatePlan(ctx, CreatePlanRequest{
+		GroupID:      0,
+		Name:         "Balance Top-Up",
+		Description:  "fixed balance package",
+		Price:        50,
+		ValidityDays: 30,
+		ValidityUnit: "days",
+		Features:     "Credits $50",
+		ProductName:  "Balance Top-Up",
+		ForSale:      true,
+		SortOrder:    1,
+	})
+	require.NoError(t, err)
+	require.Equal(t, int64(0), plan.GroupID)
+	require.Nil(t, svc.GetGroupInfoMap(ctx, []*dbent.SubscriptionPlan{plan}))
+}
+
 func TestUpdatePlanRejectsChangingToStandardGroup(t *testing.T) {
 	t.Parallel()
 
@@ -112,6 +135,44 @@ func TestUpdatePlanRejectsChangingToStandardGroup(t *testing.T) {
 		GroupID: &standardGroup.ID,
 	})
 	require.ErrorIs(t, err, ErrGroupNotSubscriptionType)
+}
+
+func TestUpdatePlanAllowsChangingToBalanceTopUpPlan(t *testing.T) {
+	t.Parallel()
+
+	svc := newPaymentConfigPlansTestService(t)
+	ctx := context.Background()
+
+	subscriptionGroup, err := svc.entClient.Group.Create().
+		SetName("Subscription Group").
+		SetPlatform(PlatformOpenAI).
+		SetDescription("subscription group").
+		SetRateMultiplier(1).
+		SetStatus(StatusActive).
+		SetSubscriptionType(SubscriptionTypeSubscription).
+		Save(ctx)
+	require.NoError(t, err)
+
+	plan, err := svc.entClient.SubscriptionPlan.Create().
+		SetGroupID(subscriptionGroup.ID).
+		SetName("Convertible Plan").
+		SetDescription("valid plan").
+		SetPrice(29.9).
+		SetValidityDays(30).
+		SetValidityUnit("days").
+		SetFeatures("Feature A").
+		SetProductName("Valid Product").
+		SetForSale(true).
+		SetSortOrder(1).
+		Save(ctx)
+	require.NoError(t, err)
+
+	balanceGroupID := int64(0)
+	updated, err := svc.UpdatePlan(ctx, int64(plan.ID), UpdatePlanRequest{
+		GroupID: &balanceGroupID,
+	})
+	require.NoError(t, err)
+	require.Equal(t, int64(0), updated.GroupID)
 }
 
 func TestCreatePlanAllowsDialogOnlyExternalSubscribeTarget(t *testing.T) {

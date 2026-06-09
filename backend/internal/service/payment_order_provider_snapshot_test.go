@@ -111,6 +111,118 @@ func TestCreateOrderInTx_WritesProviderSnapshot(t *testing.T) {
 	require.NotContains(t, order.ProviderSnapshot, "instance_name")
 }
 
+func TestCreateOrderInTx_WritesBalancePlanWithoutSubscriptionFields(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+
+	user, err := client.User.Create().
+		SetEmail("balance-plan@example.com").
+		SetPasswordHash("hash").
+		SetUsername("balance-plan-user").
+		Save(ctx)
+	require.NoError(t, err)
+
+	plan, err := client.SubscriptionPlan.Create().
+		SetGroupID(0).
+		SetName("Balance Top-Up").
+		SetDescription("fixed balance package").
+		SetPrice(50).
+		SetValidityDays(30).
+		SetValidityUnit("days").
+		SetFeatures("Credits $50").
+		SetProductName("Balance Top-Up").
+		SetForSale(true).
+		SetSortOrder(1).
+		Save(ctx)
+	require.NoError(t, err)
+
+	svc := &PaymentService{entClient: client}
+	order, err := svc.createOrderInTx(
+		ctx,
+		CreateOrderRequest{
+			UserID:      user.ID,
+			PaymentType: payment.TypeAlipay,
+			OrderType:   payment.OrderTypeBalance,
+			PlanID:      plan.ID,
+			ClientIP:    "127.0.0.1",
+			SrcHost:     "app.example.com",
+		},
+		&User{
+			ID:       user.ID,
+			Email:    user.Email,
+			Username: user.Username,
+		},
+		plan,
+		&PaymentConfig{
+			MaxPendingOrders: 3,
+			OrderTimeoutMin:  30,
+		},
+		50,
+		50,
+		0,
+		50,
+		nil,
+	)
+	require.NoError(t, err)
+	require.Equal(t, payment.OrderTypeBalance, order.OrderType)
+	require.NotNil(t, order.PlanID)
+	require.Equal(t, plan.ID, *order.PlanID)
+	require.Nil(t, order.SubscriptionGroupID)
+	require.Nil(t, order.SubscriptionDays)
+}
+
+func TestValidateSubOrderRejectsBalancePlan(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+
+	plan, err := client.SubscriptionPlan.Create().
+		SetGroupID(0).
+		SetName("Balance Top-Up").
+		SetDescription("fixed balance package").
+		SetPrice(50).
+		SetValidityDays(30).
+		SetValidityUnit("days").
+		SetFeatures("Credits $50").
+		SetProductName("Balance Top-Up").
+		SetForSale(true).
+		SetSortOrder(1).
+		Save(ctx)
+	require.NoError(t, err)
+
+	svc := &PaymentService{configService: NewPaymentConfigService(client, nil, nil)}
+	got, err := svc.validateSubOrder(ctx, CreateOrderRequest{PlanID: plan.ID})
+
+	require.Nil(t, got)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "PLAN_TYPE_MISMATCH")
+}
+
+func TestValidateBalancePlanOrderRejectsSubscriptionPlan(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+
+	plan, err := client.SubscriptionPlan.Create().
+		SetGroupID(123).
+		SetName("Subscription").
+		SetDescription("subscription package").
+		SetPrice(50).
+		SetValidityDays(30).
+		SetValidityUnit("days").
+		SetFeatures("Feature").
+		SetProductName("Subscription").
+		SetForSale(true).
+		SetSortOrder(1).
+		Save(ctx)
+	require.NoError(t, err)
+
+	svc := &PaymentService{configService: NewPaymentConfigService(client, nil, nil)}
+	got, err := svc.validateBalanceOrder(ctx, CreateOrderRequest{Amount: 50, PlanID: plan.ID}, &PaymentConfig{})
+
+	require.Nil(t, got)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "PLAN_TYPE_MISMATCH")
+}
+
 func TestBuildPaymentOrderProviderSnapshot_UsesWxpayJSAPIAppIDForOpenIDOrders(t *testing.T) {
 	t.Parallel()
 

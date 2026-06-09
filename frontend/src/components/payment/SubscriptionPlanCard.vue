@@ -18,7 +18,7 @@
           <div class="flex items-center gap-2">
             <h3 class="truncate text-base font-bold text-gray-900 dark:text-white">{{ plan.name }}</h3>
             <span :class="['shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium', badgeLightClass]">
-              {{ pLabel }}
+              {{ cardLabel }}
             </span>
           </div>
           <p v-if="plan.description" class="mt-0.5 text-xs leading-relaxed text-gray-500 dark:text-dark-400 line-clamp-2">
@@ -30,7 +30,7 @@
             <span class="text-xs text-gray-400 dark:text-dark-500">¥</span>
             <span class="text-2xl font-extrabold tracking-tight text-primary-600 dark:text-primary-300">{{ plan.price }}</span>
           </div>
-          <span class="text-[11px] text-gray-400 dark:text-dark-500">/ {{ validitySuffix }}</span>
+          <span class="text-[11px] text-gray-400 dark:text-dark-500">{{ priceSuffix }}</span>
           <div v-if="plan.original_price" class="mt-0.5 flex items-center justify-end gap-1.5">
             <span class="text-xs text-gray-400 line-through dark:text-dark-500">¥{{ plan.original_price }}</span>
             <span class="rounded bg-primary-100 px-1 py-0.5 text-[10px] font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-200">{{ discountText }}</span>
@@ -39,7 +39,14 @@
       </div>
 
       <!-- Group quota info (compact) -->
-      <div class="mb-3 grid grid-cols-2 gap-x-3 gap-y-1 rounded-xl border border-amber-100/70 bg-gradient-to-br from-primary-50/70 to-white px-3 py-2 text-xs dark:border-primary-900/25 dark:from-primary-950/20 dark:to-dark-900/70">
+      <div v-if="showInfoPanel" class="mb-3 grid grid-cols-2 gap-x-3 gap-y-1 rounded-xl border border-amber-100/70 bg-gradient-to-br from-primary-50/70 to-white px-3 py-2 text-xs dark:border-primary-900/25 dark:from-primary-950/20 dark:to-dark-900/70">
+        <template v-if="isBalanceMode">
+          <div class="col-span-2 flex items-center justify-between">
+            <span class="text-gray-400 dark:text-dark-500">{{ t('payment.planCard.creditedBalance') }}</span>
+            <span class="font-medium text-gray-700 dark:text-gray-300">${{ plan.price }}</span>
+          </div>
+        </template>
+        <template v-else>
         <div class="flex items-center justify-between">
           <span class="text-gray-400 dark:text-dark-500">{{ t('payment.planCard.rate') }}</span>
           <span class="font-medium text-gray-700 dark:text-gray-300">{{ rateDisplay }}</span>
@@ -69,6 +76,7 @@
             </span>
           </div>
         </div>
+        </template>
       </div>
 
       <!-- Features list (compact) -->
@@ -114,7 +122,7 @@
                 </svg>
               </button>
               <div class="relative pr-10">
-                <p class="text-xs font-semibold uppercase tracking-[0.22em] text-primary-100">{{ pLabel }}</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.22em] text-primary-100">{{ cardLabel }}</p>
                 <h3 class="mt-2 text-2xl font-bold">{{ plan.name }}</h3>
                 <p class="mt-2 text-sm leading-relaxed text-primary-50/90">
                   {{ plan.description || t('payment.externalSubscribeDialogFallbackTitle') }}
@@ -161,9 +169,10 @@ import {
   platformLabel,
 } from '@/utils/platformColors'
 
-const props = withDefaults(defineProps<{ plan: SubscriptionPlan; activeSubscriptions?: UserSubscription[]; selectable?: boolean; externalSubscribe?: boolean }>(), {
+const props = withDefaults(defineProps<{ plan: SubscriptionPlan; activeSubscriptions?: UserSubscription[]; selectable?: boolean; externalSubscribe?: boolean; buttonMode?: 'subscription' | 'balance' }>(), {
   selectable: true,
   externalSubscribe: false,
+  buttonMode: 'subscription',
 })
 const emit = defineEmits<{ select: [plan: SubscriptionPlan] }>()
 const { t } = useI18n()
@@ -183,6 +192,10 @@ const subscribeButtonClass = computed(() =>
     : 'bg-primary-500 text-white shadow-md shadow-primary-500/20 hover:bg-primary-600 dark:bg-primary-600 dark:hover:bg-primary-500'
 )
 const pLabel = computed(() => platformLabel(platform.value))
+const isBalanceMode = computed(() => props.buttonMode === 'balance' || props.plan.group_id <= 0)
+const cardLabel = computed(() => isBalanceMode.value ? t('payment.planCard.balanceRecharge') : pLabel.value)
+const priceSuffix = computed(() => isBalanceMode.value ? '' : `/ ${validitySuffix.value}`)
+const showInfoPanel = computed(() => isBalanceMode.value || planHasSubscriptionInfo.value)
 const externalURL = computed(() => props.plan.external_subscribe_url?.trim() || '')
 const externalDialogText = computed(() => props.plan.external_subscribe_dialog_text?.trim() || '')
 const showExternalDialog = ref(false)
@@ -192,6 +205,7 @@ const showExternalButton = computed(() =>
 const showButton = computed(() => props.selectable || showExternalButton.value)
 const buttonText = computed(() => {
   if (showExternalButton.value) return t('payment.externalSubscribe')
+  if (isBalanceMode.value) return t('payment.rechargeNow')
   return isRenewal.value ? t('payment.renewNow') : t('payment.subscribeNow')
 })
 
@@ -240,6 +254,13 @@ const modelScopeLabels = computed(() => {
   if (!scopes || scopes.length === 0) return []
   return scopes.map(s => MODEL_SCOPE_LABELS[s] || s)
 })
+
+const planHasSubscriptionInfo = computed(() =>
+  props.plan.daily_limit_usd != null ||
+  props.plan.weekly_limit_usd != null ||
+  props.plan.monthly_limit_usd != null ||
+  modelScopeLabels.value.length > 0
+)
 
 const validitySuffix = computed(() => {
   const u = props.plan.validity_unit || 'day'
