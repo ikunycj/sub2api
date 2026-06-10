@@ -68,6 +68,10 @@ vi.mock('@/stores/subscriptions', () => ({
 
 vi.mock('@/stores', () => ({
   useAppStore: () => ({
+    cachedPublicSettings: {
+      payment_display_mode: 'payment',
+      payment_enabled: true,
+    },
     showError,
     showInfo,
     showWarning,
@@ -358,6 +362,7 @@ describe('PaymentView WeChat JSAPI flow', () => {
       payment_type: 'wxpay',
       order_type: 'subscription',
       plan_id: 7,
+      amount: 0,
       wechat_resume_token: 'resume-subscription-7',
     }))
     expect(locationState.href).toContain('/api/v1/auth/oauth/wechat/payment/start?')

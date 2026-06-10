@@ -3,7 +3,7 @@ import type { SubscriptionPlan } from '@/types/payment'
 import { normalizeVisibleMethod } from '@/components/payment/paymentFlow'
 
 export interface ParsedWechatResumeRoute {
-  orderAmount: number
+  requestedAmount: number
   orderType: 'balance' | 'subscription'
   paymentType: string
   planId?: number
@@ -29,7 +29,7 @@ export function hasWechatResumeQuery(query: LocationQuery): boolean {
 
 export function parseWechatResumeRoute(
   query: LocationQuery,
-  plans: SubscriptionPlan[],
+  _plans: SubscriptionPlan[],
   fallbackBalanceAmount: number,
 ): ParsedWechatResumeRoute | null {
   if (!hasWechatResumeQuery(query)) {
@@ -51,7 +51,7 @@ export function parseWechatResumeRoute(
       wechatResumeToken,
       paymentType,
       orderType,
-      orderAmount: 0,
+      requestedAmount: 0,
       planId: hasPlanId ? planId : undefined,
     }
   }
@@ -62,17 +62,15 @@ export function parseWechatResumeRoute(
   }
 
   const rawAmount = Number.parseFloat(readQueryString(query, 'amount'))
-  const orderAmount = Number.isFinite(rawAmount) && rawAmount > 0
-    ? rawAmount
-    : (orderType === 'subscription'
-      ? (plans.find(plan => plan.id === planId)?.price ?? 0)
-      : fallbackBalanceAmount)
+  const requestedAmount = hasPlanId
+    ? 0
+    : (Number.isFinite(rawAmount) && rawAmount > 0 ? rawAmount : fallbackBalanceAmount)
 
   return {
     openid,
     paymentType,
     orderType,
-    orderAmount,
+    requestedAmount,
     planId: hasPlanId ? planId : undefined,
   }
 }

@@ -52,12 +52,15 @@ func (s *PaymentService) CreateOrder(ctx context.Context, req CreateOrderRequest
 		s.notificationEmailService.RememberRecipientLocale(ctx, req.UserID, user.Email, req.Locale)
 	}
 	orderAmount := req.Amount
-	limitAmount := req.Amount
+	paymentBaseAmount := req.Amount
+	dailyLimitAmount := req.Amount
 	if plan != nil {
 		orderAmount = plan.Price
-		limitAmount = plan.Price
+		paymentBaseAmount = plan.Price
+		dailyLimitAmount = paymentBaseAmount
 	} else if req.OrderType == payment.OrderTypeBalance {
 		orderAmount = calculateCreditedBalance(req.Amount, cfg.BalanceRechargeMultiplier)
+		dailyLimitAmount = orderAmount
 	}
 	feeRate := cfg.RechargeFeeRate
 	methodCurrency := payment.DefaultPaymentCurrency
@@ -67,7 +70,7 @@ func (s *PaymentService) CreateOrder(ctx context.Context, req CreateOrderRequest
 			return nil, err
 		}
 	}
-	payAmountStr, payAmount, err := calculateCreateOrderPayAmount(limitAmount, feeRate, methodCurrency)
+	payAmountStr, payAmount, err := calculateCreateOrderPayAmount(paymentBaseAmount, feeRate, methodCurrency)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +86,7 @@ func (s *PaymentService) CreateOrder(ctx context.Context, req CreateOrderRequest
 		selectedCurrency = paymentProviderConfigCurrency(sel.ProviderKey, sel.Config)
 	}
 	if selectedCurrency != methodCurrency {
-		payAmountStr, payAmount, err = calculateCreateOrderPayAmount(limitAmount, feeRate, selectedCurrency)
+		payAmountStr, payAmount, err = calculateCreateOrderPayAmount(paymentBaseAmount, feeRate, selectedCurrency)
 		if err != nil {
 			return nil, err
 		}
@@ -91,18 +94,18 @@ func (s *PaymentService) CreateOrder(ctx context.Context, req CreateOrderRequest
 	if err := validateSelectedCreateOrderAmountCurrency(payAmountStr, sel); err != nil {
 		return nil, err
 	}
-	oauthResp, err := s.maybeBuildWeChatOAuthRequiredResponseForSelection(ctx, req, limitAmount, payAmount, feeRate, sel)
+	oauthResp, err := s.maybeBuildWeChatOAuthRequiredResponseForSelection(ctx, req, orderAmount, paymentBaseAmount, payAmount, feeRate, sel)
 	if err != nil {
 		return nil, err
 	}
 	if oauthResp != nil {
 		return oauthResp, nil
 	}
-	order, err := s.createOrderInTx(ctx, req, user, plan, cfg, orderAmount, limitAmount, feeRate, payAmount, sel)
+	order, err := s.createOrderInTx(ctx, req, user, plan, cfg, orderAmount, dailyLimitAmount, feeRate, payAmount, sel)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := s.invokeProvider(ctx, order, req, cfg, limitAmount, payAmountStr, payAmount, plan, sel)
+	resp, err := s.invokeProvider(ctx, order, req, cfg, paymentBaseAmount, payAmountStr, payAmount, plan, sel)
 	if err != nil {
 		_, _ = s.entClient.PaymentOrder.UpdateOneID(order.ID).
 			SetStatus(OrderStatusFailed).
@@ -130,6 +133,9 @@ func (s *PaymentService) validateBalanceOrder(ctx context.Context, req CreateOrd
 		}
 		if plan.GroupID > 0 {
 			return nil, infraerrors.BadRequest("PLAN_TYPE_MISMATCH", "balance order requires a balance top-up plan")
+		}
+		if plan.Price <= 0 {
+			return nil, infraerrors.BadRequest("PLAN_AMOUNT_INVALID", "balance top-up plan amount must be > 0")
 		}
 		return plan, nil
 	}
@@ -354,10 +360,6 @@ func (s *PaymentService) checkDailyLimit(ctx context.Context, tx *dbent.Tx, user
 	}
 	var used float64
 	for _, o := range orders {
-		if o.OrderType == payment.OrderTypeBalance {
-			used += o.PayAmount
-			continue
-		}
 		used += o.Amount
 	}
 	if used+amount > limit {
@@ -561,20 +563,20 @@ func applyPaymentProductNameAffix(productName string, cfg *PaymentConfig) string
 }
 
 func (s *PaymentService) maybeBuildWeChatOAuthRequiredResponse(ctx context.Context, req CreateOrderRequest, amount, payAmount, feeRate float64) (*CreateOrderResponse, error) {
-	return s.maybeBuildWeChatOAuthRequiredResponseForSelection(ctx, req, amount, payAmount, feeRate, nil)
+	return s.maybeBuildWeChatOAuthRequiredResponseForSelection(ctx, req, amount, amount, payAmount, feeRate, nil)
 }
 
-func (s *PaymentService) maybeBuildWeChatOAuthRequiredResponseForSelection(ctx context.Context, req CreateOrderRequest, amount, payAmount, feeRate float64, sel *payment.InstanceSelection) (*CreateOrderResponse, error) {
+func (s *PaymentService) maybeBuildWeChatOAuthRequiredResponseForSelection(ctx context.Context, req CreateOrderRequest, amount, paymentBaseAmount, payAmount, feeRate float64, sel *payment.InstanceSelection) (*CreateOrderResponse, error) {
 	if sel != nil && sel.ProviderKey != "" && sel.ProviderKey != payment.TypeWxpay {
 		return nil, nil
 	}
 	if strings.TrimSpace(req.OpenID) != "" || !req.IsWeChatBrowser || payment.GetBasePaymentType(req.PaymentType) != payment.TypeWxpay {
 		return nil, nil
 	}
-	return s.buildWeChatOAuthRequiredResponse(ctx, req, amount, payAmount, feeRate)
+	return s.buildWeChatOAuthRequiredResponse(ctx, req, amount, paymentBaseAmount, payAmount, feeRate)
 }
 
-func (s *PaymentService) buildWeChatOAuthRequiredResponse(ctx context.Context, req CreateOrderRequest, amount, payAmount, feeRate float64) (*CreateOrderResponse, error) {
+func (s *PaymentService) buildWeChatOAuthRequiredResponse(ctx context.Context, req CreateOrderRequest, amount, paymentBaseAmount, payAmount, feeRate float64) (*CreateOrderResponse, error) {
 	appID, _, err := s.getWeChatPaymentOAuthCredential(ctx)
 	if err != nil {
 		return nil, err
@@ -583,7 +585,12 @@ func (s *PaymentService) buildWeChatOAuthRequiredResponse(ctx context.Context, r
 		return nil, err
 	}
 
-	authorizeURL, err := buildWeChatPaymentOAuthStartURL(req, "snsapi_base")
+	authorizeReq := req
+	authorizeReq.Amount = paymentBaseAmount
+	if authorizeReq.PlanID > 0 {
+		authorizeReq.Amount = 0
+	}
+	authorizeURL, err := buildWeChatPaymentOAuthStartURL(authorizeReq, "snsapi_base")
 	if err != nil {
 		return nil, err
 	}

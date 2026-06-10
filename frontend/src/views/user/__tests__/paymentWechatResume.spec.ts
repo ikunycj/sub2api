@@ -15,7 +15,7 @@ describe('parseWechatResumeRoute', () => {
       wechatResumeToken: 'resume-token-123',
       paymentType: 'wxpay',
       orderType: 'subscription',
-      orderAmount: 0,
+      requestedAmount: 0,
       planId: 7,
     })
   })
@@ -31,7 +31,7 @@ describe('parseWechatResumeRoute', () => {
       openid: 'openid-123',
       paymentType: 'wxpay',
       orderType: 'balance',
-      orderAmount: 12.5,
+      requestedAmount: 12.5,
       planId: undefined,
     })
   })
@@ -48,7 +48,37 @@ describe('parseWechatResumeRoute', () => {
       openid: 'openid-123',
       paymentType: 'wxpay',
       orderType: 'balance',
-      orderAmount: 50,
+      requestedAmount: 0,
+      planId: 9,
+    })
+  })
+
+  it('does not derive package order amount from plan price when plan id is present', () => {
+    expect(parseWechatResumeRoute({
+      wechat_resume: '1',
+      openid: 'openid-123',
+      payment_type: 'wxpay',
+      amount: '80',
+      order_type: 'balance',
+      plan_id: '9',
+    }, [{
+      id: 9,
+      group_id: 0,
+      group_platform: 'balance',
+      group_name: 'Balance Top-Up',
+      name: 'Balance 80',
+      description: '',
+      price: 80,
+      validity_days: 0,
+      validity_unit: '',
+      features: [],
+      for_sale: true,
+      sort_order: 1,
+    }], 88)).toEqual({
+      openid: 'openid-123',
+      paymentType: 'wxpay',
+      orderType: 'balance',
+      requestedAmount: 0,
       planId: 9,
     })
   })

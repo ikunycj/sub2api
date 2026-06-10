@@ -88,7 +88,31 @@ func TestCreatePlanAllowsBalanceTopUpPlanWithoutGroup(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, int64(0), plan.GroupID)
+	require.Equal(t, 50.0, plan.Price)
 	require.Nil(t, svc.GetGroupInfoMap(ctx, []*dbent.SubscriptionPlan{plan}))
+}
+
+func TestCreatePlanAllowsPermanentPlanWithoutValidityUnit(t *testing.T) {
+	t.Parallel()
+
+	svc := newPaymentConfigPlansTestService(t)
+	ctx := context.Background()
+
+	plan, err := svc.CreatePlan(ctx, CreatePlanRequest{
+		GroupID:      0,
+		Name:         "Permanent Balance Top-Up",
+		Description:  "fixed balance package",
+		Price:        50,
+		ValidityDays: 0,
+		ValidityUnit: "",
+		Features:     "Credits $50",
+		ProductName:  "Permanent Balance Top-Up",
+		ForSale:      true,
+		SortOrder:    1,
+	})
+	require.NoError(t, err)
+	require.Equal(t, 0, plan.ValidityDays)
+	require.Equal(t, "", plan.ValidityUnit)
 }
 
 func TestUpdatePlanRejectsChangingToStandardGroup(t *testing.T) {
