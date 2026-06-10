@@ -183,8 +183,115 @@ func TestCreateOrderInTx_WritesBalancePlanWithoutSubscriptionFields(t *testing.T
 	require.Equal(t, payment.OrderTypeBalance, order.OrderType)
 	require.NotNil(t, order.PlanID)
 	require.Equal(t, plan.ID, *order.PlanID)
+	require.Equal(t, 50.0, order.Amount)
+	require.Equal(t, 50.0, order.PayAmount)
 	require.Nil(t, order.SubscriptionGroupID)
 	require.Nil(t, order.SubscriptionDays)
+}
+
+func TestCheckDailyLimitUsesBaseAmountInsteadOfPayAmount(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+
+	user, err := client.User.Create().
+		SetEmail("daily-limit@example.com").
+		SetPasswordHash("hash").
+		SetUsername("daily-limit-user").
+		Save(ctx)
+	require.NoError(t, err)
+
+	now := time.Now()
+	_, err = client.PaymentOrder.Create().
+		SetUserID(user.ID).
+		SetUserEmail(user.Email).
+		SetUserName(user.Username).
+		SetAmount(50).
+		SetPayAmount(51.5).
+		SetFeeRate(3).
+		SetRechargeCode("PAY-DAILY-LIMIT").
+		SetOutTradeNo("DAILY-LIMIT-PAID").
+		SetPaymentType(payment.TypeAlipay).
+		SetPaymentTradeNo("TRADE-DAILY-LIMIT").
+		SetOrderType(payment.OrderTypeBalance).
+		SetStatus(OrderStatusCompleted).
+		SetExpiresAt(now.Add(time.Hour)).
+		SetClientIP("127.0.0.1").
+		SetSrcHost("app.example.com").
+		SetPaidAt(now).
+		SetCompletedAt(now).
+		Save(ctx)
+	require.NoError(t, err)
+
+	tx, err := client.Tx(ctx)
+	require.NoError(t, err)
+	defer func() { _ = tx.Rollback() }()
+
+	svc := &PaymentService{entClient: client}
+	require.NoError(t, svc.checkDailyLimit(ctx, tx, user.ID, 50, 100))
+	require.Error(t, svc.checkDailyLimit(ctx, tx, user.ID, 50.01, 100))
+}
+
+func TestCreateOrderDailyLimitUsesCreditedBalanceAmount(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+
+	user, err := client.User.Create().
+		SetEmail("daily-limit-multiplier@example.com").
+		SetPasswordHash("hash").
+		SetUsername("daily-limit-multiplier-user").
+		Save(ctx)
+	require.NoError(t, err)
+
+	now := time.Now()
+	_, err = client.PaymentOrder.Create().
+		SetUserID(user.ID).
+		SetUserEmail(user.Email).
+		SetUserName(user.Username).
+		SetAmount(50).
+		SetPayAmount(25.75).
+		SetFeeRate(3).
+		SetRechargeCode("PAY-DAILY-LIMIT-MULTIPLIER").
+		SetOutTradeNo("DAILY-LIMIT-MULTIPLIER-PAID").
+		SetPaymentType(payment.TypeAlipay).
+		SetPaymentTradeNo("TRADE-DAILY-LIMIT-MULTIPLIER").
+		SetOrderType(payment.OrderTypeBalance).
+		SetStatus(OrderStatusCompleted).
+		SetExpiresAt(now.Add(time.Hour)).
+		SetClientIP("127.0.0.1").
+		SetSrcHost("app.example.com").
+		SetPaidAt(now).
+		SetCompletedAt(now).
+		Save(ctx)
+	require.NoError(t, err)
+
+	settingRepo := &paymentConfigSettingRepoStub{values: map[string]string{
+		SettingPaymentEnabled:      "true",
+		SettingPaymentDisplayMode:  PaymentDisplayModePayment,
+		SettingMinRechargeAmount:   "1",
+		SettingDailyRechargeLimit:  "100",
+		SettingBalanceRechargeMult: "2",
+		SettingRechargeFeeRate:     "3",
+	}}
+	cfgSvc := NewPaymentConfigService(client, settingRepo, nil)
+	svc := &PaymentService{
+		entClient:       client,
+		registry:        payment.NewRegistry(),
+		loadBalancer:    &paymentOrderStaticLoadBalancer{selection: &payment.InstanceSelection{ProviderKey: payment.TypeAlipay}},
+		configService:   cfgSvc,
+		userRepo:        &mockUserRepo{getByIDUser: &User{ID: user.ID, Email: user.Email, Username: user.Username, Status: payment.EntityStatusActive}},
+		providersLoaded: true,
+	}
+
+	_, err = svc.CreateOrder(ctx, CreateOrderRequest{
+		UserID:      user.ID,
+		Amount:      25.01,
+		PaymentType: payment.TypeAlipay,
+		OrderType:   payment.OrderTypeBalance,
+		ClientIP:    "127.0.0.1",
+		SrcHost:     "app.example.com",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "DAILY_LIMIT_EXCEEDED")
 }
 
 func TestValidateSubOrderRejectsBalancePlan(t *testing.T) {

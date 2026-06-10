@@ -181,7 +181,7 @@ const { t } = useI18n()
 const appStore = useAppStore()
 
 const saving = ref(false)
-const planForm = reactive({ name: '', group_id: null as number | null, description: '', price: 0, original_price: 0, validity_days: 30, validity_unit: 'days', sort_order: 0, external_subscribe_enabled: false, external_subscribe_url: '', external_subscribe_dialog_text: '', for_sale: true })
+const planForm = reactive({ name: '', group_id: null as number | null, description: '', price: 0, original_price: 0, validity_days: 0 as number | string, validity_unit: '' as string | null, sort_order: 0, external_subscribe_enabled: false, external_subscribe_url: '', external_subscribe_dialog_text: '', for_sale: true })
 const planFeaturesText = ref('')
 const externalSubscribeTargetType = ref<'url' | 'dialog'>('url')
 
@@ -227,11 +227,11 @@ function setExternalSubscribeTargetType(type: 'url' | 'dialog') {
 watch(() => props.show, (visible) => {
   if (!visible) return
   if (props.plan) {
-    Object.assign(planForm, { name: props.plan.name, group_id: props.plan.group_id, description: props.plan.description, price: props.plan.price, original_price: props.plan.original_price || 0, validity_days: props.plan.validity_days, validity_unit: props.plan.validity_unit || 'days', sort_order: props.plan.sort_order || 0, external_subscribe_enabled: props.initialExternalSubscribeEnabled ?? props.plan.external_subscribe_enabled === true, external_subscribe_url: props.plan.external_subscribe_url || '', external_subscribe_dialog_text: props.plan.external_subscribe_dialog_text || '', for_sale: props.plan.for_sale })
+    Object.assign(planForm, { name: props.plan.name, group_id: props.plan.group_id, description: props.plan.description, price: props.plan.price, original_price: props.plan.original_price || 0, validity_days: props.plan.validity_days ?? 0, validity_unit: props.plan.validity_unit || '', sort_order: props.plan.sort_order || 0, external_subscribe_enabled: props.initialExternalSubscribeEnabled ?? props.plan.external_subscribe_enabled === true, external_subscribe_url: props.plan.external_subscribe_url || '', external_subscribe_dialog_text: props.plan.external_subscribe_dialog_text || '', for_sale: props.plan.for_sale })
     externalSubscribeTargetType.value = inferExternalSubscribeTargetType(props.plan)
     planFeaturesText.value = (props.plan.features || []).join('\n')
   } else {
-    Object.assign(planForm, { name: '', group_id: null, description: '', price: 0, original_price: 0, validity_days: 30, validity_unit: 'days', sort_order: 0, external_subscribe_enabled: false, external_subscribe_url: '', external_subscribe_dialog_text: '', for_sale: true })
+    Object.assign(planForm, { name: '', group_id: null, description: '', price: 0, original_price: 0, validity_days: 0, validity_unit: '', sort_order: 0, external_subscribe_enabled: false, external_subscribe_url: '', external_subscribe_dialog_text: '', for_sale: true })
     externalSubscribeTargetType.value = 'url'
     planFeaturesText.value = ''
   }
@@ -243,6 +243,12 @@ function normalizeExternalSubscribeUrl(raw: string): string {
   if (!trimmed) return ''
   if (/^[a-z][a-z\d+\-.]*:\/\//i.test(trimmed)) return trimmed
   return `https://${trimmed}`
+}
+
+function normalizeValidityDays(value: number | string): number {
+  if (value === '') return 0
+  const days = Number(value)
+  return Number.isFinite(days) ? days : 0
 }
 
 function buildPlanPayload() {

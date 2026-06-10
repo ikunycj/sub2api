@@ -1119,9 +1119,9 @@ async function resumeWechatPaymentFromQuery() {
   }
 
   selectedMethod.value = resume.paymentType
-  if (resume.orderType === 'balance' && resume.orderAmount > 0) {
+  if (resume.orderType === 'balance' && resume.requestedAmount > 0 && !resume.planId) {
     activeTab.value = 'recharge'
-    amount.value = resume.orderAmount
+    amount.value = resume.requestedAmount
   }
   if (resume.orderType === 'subscription' && resume.planId) {
     activeTab.value = 'subscription'
