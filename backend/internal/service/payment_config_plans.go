@@ -23,11 +23,8 @@ func validatePlanRequired(name string, groupID int64, price float64, validityDay
 	if price <= 0 {
 		return infraerrors.BadRequest("PLAN_PRICE_INVALID", "price must be > 0")
 	}
-	if validityDays <= 0 {
-		return infraerrors.BadRequest("PLAN_VALIDITY_REQUIRED", "validity days must be > 0")
-	}
-	if strings.TrimSpace(validityUnit) == "" {
-		return infraerrors.BadRequest("PLAN_VALIDITY_UNIT_REQUIRED", "validity unit is required")
+	if validityDays < 0 {
+		return infraerrors.BadRequest("PLAN_VALIDITY_REQUIRED", "validity days must be >= 0")
 	}
 	if originalPrice != nil && *originalPrice < 0 {
 		return infraerrors.BadRequest("PLAN_ORIGINAL_PRICE_INVALID", "original price must be >= 0")
@@ -114,11 +111,8 @@ func validatePlanPatch(req UpdatePlanRequest) error {
 	if req.Price != nil && *req.Price <= 0 {
 		return infraerrors.BadRequest("PLAN_PRICE_INVALID", "price must be > 0")
 	}
-	if req.ValidityDays != nil && *req.ValidityDays <= 0 {
-		return infraerrors.BadRequest("PLAN_VALIDITY_REQUIRED", "validity days must be > 0")
-	}
-	if req.ValidityUnit != nil && strings.TrimSpace(*req.ValidityUnit) == "" {
-		return infraerrors.BadRequest("PLAN_VALIDITY_UNIT_REQUIRED", "validity unit is required")
+	if req.ValidityDays != nil && *req.ValidityDays < 0 {
+		return infraerrors.BadRequest("PLAN_VALIDITY_REQUIRED", "validity days must be >= 0")
 	}
 	if req.OriginalPrice != nil && *req.OriginalPrice < 0 {
 		return infraerrors.BadRequest("PLAN_ORIGINAL_PRICE_INVALID", "original price must be >= 0")
@@ -223,6 +217,10 @@ func (s *PaymentConfigService) UpdatePlan(ctx context.Context, id int64, req Upd
 	if err := validatePlanPatch(req); err != nil {
 		return nil, err
 	}
+	current, err := s.entClient.SubscriptionPlan.Get(ctx, id)
+	if err != nil {
+		return nil, infraerrors.NotFound("PLAN_NOT_FOUND", "subscription plan not found")
+	}
 	// Only validate explicit group reassignment so legacy invalid plans can still
 	// be disabled or repaired without being trapped by unrelated field edits.
 	if req.GroupID != nil && *req.GroupID > 0 {
@@ -231,10 +229,6 @@ func (s *PaymentConfigService) UpdatePlan(ctx context.Context, id int64, req Upd
 		}
 	}
 	if req.ExternalSubscribeEnabled != nil || req.ExternalSubscribeURL != nil || req.ExternalSubscribeDialogText != nil {
-		current, err := s.entClient.SubscriptionPlan.Get(ctx, id)
-		if err != nil {
-			return nil, infraerrors.NotFound("PLAN_NOT_FOUND", "subscription plan not found")
-		}
 		enabled := current.ExternalSubscribeEnabled
 		rawURL := current.ExternalSubscribeURL
 		dialogText := current.ExternalSubscribeDialogText

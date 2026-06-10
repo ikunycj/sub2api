@@ -467,7 +467,7 @@ async function redirectToPaymentResult(state: PaymentRecoverySnapshot): Promise<
 
 function buildWechatOAuthAuthorizeUrl(
   authorizeUrl: string,
-  context: { paymentType: string; orderType: OrderType; planId?: number; orderAmount: number },
+  context: { paymentType: string; orderType: OrderType; planId?: number; requestedAmount: number },
 ): string {
   const normalizedUrl = authorizeUrl.trim()
   if (!normalizedUrl || typeof window === 'undefined') {
@@ -489,10 +489,9 @@ function buildWechatOAuthAuthorizeUrl(
       redirectUrl.searchParams.delete('plan_id')
     }
 
-    if (context.orderAmount > 0) {
-      redirectUrl.searchParams.set('amount', String(context.orderAmount))
-    } else {
-      redirectUrl.searchParams.delete('amount')
+    redirectUrl.searchParams.delete('amount')
+    if (!context.planId && context.requestedAmount > 0) {
+      redirectUrl.searchParams.set('amount', String(context.requestedAmount))
     }
 
     targetUrl.searchParams.set('redirect', `${redirectUrl.pathname}${redirectUrl.search}`)
@@ -754,9 +753,11 @@ const renewalPlans = computed(() => {
 
 const planValiditySuffix = computed(() => {
   if (!selectedPlan.value) return ''
+  if ((selectedPlan.value.validity_days ?? 0) <= 0) return t('payment.permanent')
   const u = selectedPlan.value.validity_unit || 'day'
-  if (u === 'month') return t('payment.perMonth')
-  if (u === 'year') return t('payment.perYear')
+  if (u === 'week' || u === 'weeks') return t('payment.perWeek')
+  if (u === 'month' || u === 'months') return t('payment.perMonth')
+  if (u === 'year' || u === 'years') return t('payment.perYear')
   return `${selectedPlan.value.validity_days}${t('payment.days')}`
 })
 
@@ -810,14 +811,15 @@ async function confirmSubscribe() {
   await createOrder(selectedPlan.value.price, 'subscription', selectedPlan.value.id)
 }
 
-async function createOrder(orderAmount: number, orderType: OrderType, planId?: number, options: CreateOrderOptions = {}) {
+async function createOrder(requestedAmount: number, orderType: OrderType, planId?: number, options: CreateOrderOptions = {}) {
   submitting.value = true
   errorMessage.value = ''
   errorHintMessage.value = ''
   const requestType = normalizeVisibleMethod(options.paymentType || selectedMethod.value) || options.paymentType || selectedMethod.value
   try {
+    const payloadAmount = planId ? 0 : requestedAmount
     const payload = buildCreateOrderPayload({
-      amount: orderAmount,
+      amount: payloadAmount,
       paymentType: requestType,
       orderType,
       planId,
@@ -883,7 +885,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
         paymentType: visibleMethod,
         orderType,
         planId,
-        orderAmount,
+        requestedAmount,
       })
       return
     }
@@ -921,7 +923,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
           const fallbackApplied = await attemptMobileQrFallback(
             { reason: 'WECHAT_JSAPI_FAILED', message: errMsg },
             {
-              orderAmount,
+              requestedAmount,
               orderType,
               planId,
               paymentType: visibleMethod,
@@ -939,7 +941,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
       } catch (err: unknown) {
         resetPayment()
         const fallbackApplied = await attemptMobileQrFallback(err, {
-          orderAmount,
+          requestedAmount,
           orderType,
           planId,
           paymentType: visibleMethod,
@@ -968,7 +970,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
       errorMessage.value = t('payment.errors.cancelRateLimited')
       errorHintMessage.value = ''
     } else if (await attemptMobileQrFallback(err, {
-      orderAmount,
+      requestedAmount,
       orderType,
       planId,
       paymentType: requestType,
@@ -995,7 +997,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
 }
 
 interface MobileQrFallbackContext {
-  orderAmount: number
+  requestedAmount: number
   orderType: OrderType
   planId?: number
   paymentType: string
@@ -1042,8 +1044,9 @@ async function attemptMobileQrFallback(err: unknown, context: MobileQrFallbackCo
 
   try {
     const visibleMethod = normalizeVisibleMethod(context.paymentType) || context.paymentType
+    const payloadAmount = context.planId ? 0 : context.requestedAmount
     const payload = buildCreateOrderPayload({
-      amount: context.orderAmount,
+      amount: payloadAmount,
       paymentType: visibleMethod,
       orderType: context.orderType,
       planId: context.planId,
@@ -1116,9 +1119,9 @@ async function resumeWechatPaymentFromQuery() {
   }
 
   selectedMethod.value = resume.paymentType
-  if (resume.orderType === 'balance' && resume.orderAmount > 0) {
+  if (resume.orderType === 'balance' && resume.requestedAmount > 0 && !resume.planId) {
     activeTab.value = 'recharge'
-    amount.value = resume.orderAmount
+    amount.value = resume.requestedAmount
   }
   if (resume.orderType === 'subscription' && resume.planId) {
     activeTab.value = 'subscription'
@@ -1136,8 +1139,8 @@ async function resumeWechatPaymentFromQuery() {
     return
   }
 
-  if (resume.orderAmount > 0 && resume.openid) {
-    await createOrder(resume.orderAmount, resume.orderType, resume.planId, {
+  if ((resume.requestedAmount > 0 || resume.planId) && resume.openid) {
+    await createOrder(resume.requestedAmount, resume.orderType, resume.planId, {
       openid: resume.openid,
       paymentType: resume.paymentType,
       isResume: true,

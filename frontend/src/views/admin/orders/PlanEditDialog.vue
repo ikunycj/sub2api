@@ -40,18 +40,20 @@
         <div>
           <label class="input-label">{{ t('payment.admin.price') }} <span class="text-red-500">*</span></label>
           <input v-model.number="planForm.price" type="number" step="0.01" min="0.01" class="input" required />
-          <p v-if="subscriptionCnyPreview" class="mt-1 text-xs font-medium text-primary-600 dark:text-primary-400">
-            {{ t('payment.admin.subscriptionCnyPayPreview', { amount: subscriptionCnyPreview.amount }) }}
-            <span v-if="subscriptionCnyPreview.feeRate > 0">
-              {{ t('payment.admin.subscriptionCnyPayPreviewWithFee', { feeRate: subscriptionCnyPreview.feeRate, total: subscriptionCnyPreview.total }) }}
-            </span>
-          </p>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('payment.admin.priceHint') }}</p>
         </div>
         <div><label class="input-label">{{ t('payment.admin.originalPrice') }}</label><input v-model.number="planForm.original_price" type="number" step="0.01" min="0" class="input" /></div>
       </div>
       <div class="grid grid-cols-2 gap-4">
-        <div><label class="input-label">{{ t('payment.admin.validityDays') }} <span class="text-red-500">*</span></label><input v-model.number="planForm.validity_days" type="number" min="1" class="input" required /></div>
-        <div><label class="input-label">{{ t('payment.admin.validityUnit') }} <span class="text-red-500">*</span></label><Select v-model="planForm.validity_unit" :options="validityUnitOptions" /></div>
+        <div>
+          <label class="input-label">{{ t('payment.admin.validityDays') }}</label>
+          <input v-model.number="planForm.validity_days" type="number" min="0" class="input" />
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('payment.admin.validityPermanentHint') }}</p>
+        </div>
+        <div>
+          <label class="input-label">{{ t('payment.admin.validityUnit') }}</label>
+          <Select v-model="planForm.validity_unit" :options="validityUnitOptions" :placeholder="t('payment.admin.selectValidityUnit')" clearable />
+        </div>
       </div>
       <div class="grid grid-cols-2 gap-4">
         <div><label class="input-label">{{ t('payment.admin.sortOrder') }}</label><input v-model.number="planForm.sort_order" type="number" min="0" class="input" /></div>
@@ -179,7 +181,7 @@ const { t } = useI18n()
 const appStore = useAppStore()
 
 const saving = ref(false)
-const planForm = reactive({ name: '', group_id: null as number | null, description: '', price: 0, original_price: 0, validity_days: 30, validity_unit: 'days', sort_order: 0, external_subscribe_enabled: false, external_subscribe_url: '', external_subscribe_dialog_text: '', for_sale: true })
+const planForm = reactive({ name: '', group_id: null as number | null, description: '', price: 0, original_price: 0, validity_days: 0 as number | string, validity_unit: '' as string | null, sort_order: 0, external_subscribe_enabled: false, external_subscribe_url: '', external_subscribe_dialog_text: '', for_sale: true })
 const planFeaturesText = ref('')
 const externalSubscribeTargetType = ref<'url' | 'dialog'>('url')
 
@@ -225,11 +227,11 @@ function setExternalSubscribeTargetType(type: 'url' | 'dialog') {
 watch(() => props.show, (visible) => {
   if (!visible) return
   if (props.plan) {
-    Object.assign(planForm, { name: props.plan.name, group_id: props.plan.group_id, description: props.plan.description, price: props.plan.price, original_price: props.plan.original_price || 0, validity_days: props.plan.validity_days, validity_unit: props.plan.validity_unit || 'days', sort_order: props.plan.sort_order || 0, external_subscribe_enabled: props.initialExternalSubscribeEnabled ?? props.plan.external_subscribe_enabled === true, external_subscribe_url: props.plan.external_subscribe_url || '', external_subscribe_dialog_text: props.plan.external_subscribe_dialog_text || '', for_sale: props.plan.for_sale })
+    Object.assign(planForm, { name: props.plan.name, group_id: props.plan.group_id, description: props.plan.description, price: props.plan.price, original_price: props.plan.original_price || 0, validity_days: props.plan.validity_days ?? 0, validity_unit: props.plan.validity_unit || '', sort_order: props.plan.sort_order || 0, external_subscribe_enabled: props.initialExternalSubscribeEnabled ?? props.plan.external_subscribe_enabled === true, external_subscribe_url: props.plan.external_subscribe_url || '', external_subscribe_dialog_text: props.plan.external_subscribe_dialog_text || '', for_sale: props.plan.for_sale })
     externalSubscribeTargetType.value = inferExternalSubscribeTargetType(props.plan)
     planFeaturesText.value = (props.plan.features || []).join('\n')
   } else {
-    Object.assign(planForm, { name: '', group_id: null, description: '', price: 0, original_price: 0, validity_days: 30, validity_unit: 'days', sort_order: 0, external_subscribe_enabled: false, external_subscribe_url: '', external_subscribe_dialog_text: '', for_sale: true })
+    Object.assign(planForm, { name: '', group_id: null, description: '', price: 0, original_price: 0, validity_days: 0, validity_unit: '', sort_order: 0, external_subscribe_enabled: false, external_subscribe_url: '', external_subscribe_dialog_text: '', for_sale: true })
     externalSubscribeTargetType.value = 'url'
     planFeaturesText.value = ''
   }
@@ -241,6 +243,12 @@ function normalizeExternalSubscribeUrl(raw: string): string {
   if (!trimmed) return ''
   if (/^[a-z][a-z\d+\-.]*:\/\//i.test(trimmed)) return trimmed
   return `https://${trimmed}`
+}
+
+function normalizeValidityDays(value: number | string): number {
+  if (value === '') return 0
+  const days = Number(value)
+  return Number.isFinite(days) ? days : 0
 }
 
 function buildPlanPayload() {
@@ -258,8 +266,8 @@ function buildPlanPayload() {
     description: planForm.description,
     price: planForm.price,
     original_price: planForm.original_price || 0,
-    validity_days: planForm.validity_days,
-    validity_unit: planForm.validity_unit,
+    validity_days: normalizeValidityDays(planForm.validity_days),
+    validity_unit: planForm.validity_unit || '',
     sort_order: planForm.sort_order,
     external_subscribe_enabled: planForm.external_subscribe_enabled,
     external_subscribe_url: externalSubscribeUrl,
@@ -274,7 +282,7 @@ async function handleSavePlan() {
     appStore.showError(t('payment.admin.priceRequired'))
     return
   }
-  if (!planForm.validity_days || planForm.validity_days < 1) {
+  if (normalizeValidityDays(planForm.validity_days) < 0) {
     appStore.showError(t('payment.admin.validityDaysRequired'))
     return
   }

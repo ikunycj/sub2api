@@ -433,6 +433,47 @@ func TestMaybeBuildWeChatOAuthRequiredResponse(t *testing.T) {
 	}
 }
 
+func TestMaybeBuildWeChatOAuthRequiredResponseOmitsAmountForPlanResume(t *testing.T) {
+	t.Setenv("PAYMENT_RESUME_SIGNING_KEY", "0123456789abcdef0123456789abcdef")
+
+	svc := newWeChatPaymentOAuthTestService(map[string]string{
+		SettingKeyWeChatConnectEnabled:             "true",
+		SettingKeyWeChatConnectAppID:               "wx123456",
+		SettingKeyWeChatConnectAppSecret:           "wechat-secret",
+		SettingKeyWeChatConnectMode:                "mp",
+		SettingKeyWeChatConnectScopes:              "snsapi_base",
+		SettingKeyWeChatConnectRedirectURL:         "https://api.example.com/api/v1/auth/oauth/wechat/callback",
+		SettingKeyWeChatConnectFrontendRedirectURL: "/auth/wechat/callback",
+	})
+
+	resp, err := svc.maybeBuildWeChatOAuthRequiredResponseForSelection(context.Background(), CreateOrderRequest{
+		Amount:          80,
+		PaymentType:     payment.TypeWxpay,
+		IsWeChatBrowser: true,
+		SrcURL:          "https://merchant.example/purchase",
+		OrderType:       payment.OrderTypeBalance,
+		PlanID:          7,
+	}, 80, 80, 82.4, 3, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp == nil {
+		t.Fatal("expected oauth_required response, got nil")
+	}
+	if resp.Amount != 80 {
+		t.Fatalf("amount = %v, want credited amount 80", resp.Amount)
+	}
+	if resp.PayAmount != 82.4 {
+		t.Fatalf("pay_amount = %v, want 82.4", resp.PayAmount)
+	}
+	if resp.OAuth == nil {
+		t.Fatal("expected oauth payload, got nil")
+	}
+	if resp.OAuth.AuthorizeURL != "/api/v1/auth/oauth/wechat/payment/start?order_type=balance&payment_type=wxpay&plan_id=7&redirect=%2Fpurchase&scope=snsapi_base" {
+		t.Fatalf("authorize_url = %q", resp.OAuth.AuthorizeURL)
+	}
+}
+
 func TestMaybeBuildWeChatOAuthRequiredResponseRequiresMPConfigInWeChat(t *testing.T) {
 	t.Parallel()
 
@@ -551,7 +592,7 @@ func TestMaybeBuildWeChatOAuthRequiredResponseForSelectionSkipsEasyPayProvider(t
 		PaymentType:     payment.TypeWxpay,
 		IsWeChatBrowser: true,
 		OrderType:       payment.OrderTypeBalance,
-	}, 12.5, 12.88, 0.03, &payment.InstanceSelection{
+	}, 12.5, 12.5, 12.88, 0.03, &payment.InstanceSelection{
 		ProviderKey: payment.TypeEasyPay,
 	})
 	if err != nil {
