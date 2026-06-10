@@ -12,6 +12,7 @@ const i18n = createI18n({
     en: {
       payment: {
         days: "days",
+        permanent: "Permanent",
         models: "Models",
         rechargeNow: "Top Up Now",
         planCard: {
@@ -36,7 +37,6 @@ const mountPlanCard = (groupPlatform: string) =>
         group_platform: groupPlatform,
         name: "Pro",
         price: 10,
-        amount: 1000,
         features: [],
         rate_multiplier: 1,
         validity_days: 30,
@@ -88,9 +88,31 @@ describe("SubscriptionPlanCard", () => {
     const text = wrapper.text();
 
     expect(text).toContain("payment.planCard.balanceRecharge");
-    expect(text).toContain("payment.planCard.creditedBalance");
-    expect(text).toContain("$50");
+    expect(text).toContain("¥50");
     expect(text).toContain("payment.rechargeNow");
     expect(text).not.toContain("payment.planCard.rate");
+  });
+
+  it("shows permanent validity when validity days is zero", () => {
+    const wrapper = mount(SubscriptionPlanCard, {
+      props: {
+        plan: {
+          id: 2,
+          group_id: 10,
+          group_platform: "openai",
+          name: "Lifetime",
+          price: 99,
+          features: [],
+          validity_days: 0,
+          validity_unit: "",
+          for_sale: true,
+          sort_order: 1,
+        },
+      },
+      global: { plugins: [i18n] },
+    });
+
+    expect(wrapper.text()).toContain("/ payment.permanent");
+    expect(wrapper.text()).not.toContain("0days");
   });
 });

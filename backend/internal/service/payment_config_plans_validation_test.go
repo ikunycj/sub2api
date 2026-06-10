@@ -49,9 +49,8 @@ func TestValidatePlanRequired_NegativePrice(t *testing.T) {
 }
 
 func TestValidatePlanRequired_ZeroValidityDays(t *testing.T) {
-	err := validatePlanRequired("Pro", 1, 9.99, 0, "days", nil)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "validity days")
+	err := validatePlanRequired("Pro", 1, 9.99, 0, "", nil)
+	require.NoError(t, err)
 }
 
 func TestValidatePlanRequired_NegativeValidityDays(t *testing.T) {
@@ -62,14 +61,17 @@ func TestValidatePlanRequired_NegativeValidityDays(t *testing.T) {
 
 func TestValidatePlanRequired_EmptyValidityUnit(t *testing.T) {
 	err := validatePlanRequired("Pro", 1, 9.99, 30, "", nil)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "validity unit")
+	require.NoError(t, err)
+}
+
+func TestValidatePlanRequired_ZeroValidityAllowsWhitespaceValidityUnit(t *testing.T) {
+	err := validatePlanRequired("Pro", 1, 9.99, 0, "   ", nil)
+	require.NoError(t, err)
 }
 
 func TestValidatePlanRequired_WhitespaceValidityUnit(t *testing.T) {
 	err := validatePlanRequired("Pro", 1, 9.99, 30, "   ", nil)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "validity unit")
+	require.NoError(t, err)
 }
 
 func TestValidatePlanRequired_NameValidatedFirst(t *testing.T) {
@@ -176,14 +178,17 @@ func TestValidatePlanPatch_ValidPrice(t *testing.T) {
 
 func TestValidatePlanPatch_ZeroValidityDays(t *testing.T) {
 	err := validatePlanPatch(UpdatePlanRequest{ValidityDays: ptrInt(0)})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "validity days")
+	require.NoError(t, err)
 }
 
 func TestValidatePlanPatch_EmptyValidityUnit(t *testing.T) {
 	err := validatePlanPatch(UpdatePlanRequest{ValidityUnit: ptrStr("")})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "validity unit")
+	require.NoError(t, err)
+}
+
+func TestValidatePlanPatch_EmptyValidityUnitWithPositiveDays(t *testing.T) {
+	err := validatePlanPatch(UpdatePlanRequest{ValidityDays: ptrInt(30), ValidityUnit: ptrStr("")})
+	require.NoError(t, err)
 }
 
 func TestValidatePlanPatch_ValidValidityUnit(t *testing.T) {
