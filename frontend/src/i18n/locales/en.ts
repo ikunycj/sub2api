@@ -3623,6 +3623,13 @@ export default {
       priorityHint: 'Lower value accounts are used first',
       billingRateMultiplier: 'Billing Rate Multiplier',
       billingRateMultiplierHint: '0 = free, affects account billing only',
+      dispatchPolicy: {
+        label: 'Dispatch Policy',
+        normal: 'Normal Scheduling',
+        preferred: 'Force Preferred',
+        fallback: 'Force Fallback',
+        hint: 'OpenAI accounts only. Preferred accounts override sticky binding when usable; fallback accounts are used only when no other usable account exists.'
+      },
       expiresAt: 'Expires At',
       expiresAtHint: 'Leave empty for no expiration',
       higherPriorityFirst: 'Lower value means higher priority',

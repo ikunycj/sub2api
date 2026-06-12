@@ -769,6 +769,34 @@ func (a *Account) GetExtraString(key string) string {
 	return ""
 }
 
+const (
+	dispatchPolicyExtraKey  = "dispatch_policy"
+	DispatchPolicyPreferred = "preferred"
+	DispatchPolicyFallback  = "fallback"
+)
+
+func (a *Account) DispatchPolicy() string {
+	if a == nil {
+		return ""
+	}
+	switch strings.ToLower(strings.TrimSpace(a.GetExtraString(dispatchPolicyExtraKey))) {
+	case DispatchPolicyPreferred:
+		return DispatchPolicyPreferred
+	case DispatchPolicyFallback:
+		return DispatchPolicyFallback
+	default:
+		return ""
+	}
+}
+
+func (a *Account) IsDispatchPreferred() bool {
+	return a.DispatchPolicy() == DispatchPolicyPreferred
+}
+
+func (a *Account) IsDispatchFallback() bool {
+	return a.DispatchPolicy() == DispatchPolicyFallback
+}
+
 func (a *Account) GetClaudeUserID() string {
 	if v := strings.TrimSpace(a.GetExtraString("claude_user_id")); v != "" {
 		return v

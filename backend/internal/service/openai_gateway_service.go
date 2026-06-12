@@ -1624,6 +1624,59 @@ func resolveOpenAIAccountUpstreamModelForRequest(account *Account, requestedMode
 	return upstreamModel
 }
 
+func filterOpenAIDispatchPolicyCandidates(candidates []*Account, requireCompact bool) []*Account {
+	if len(candidates) == 0 {
+		return candidates
+	}
+
+	policyScope := candidates
+	if requireCompact {
+		compactCapable := make([]*Account, 0, len(candidates))
+		for _, account := range candidates {
+			if account != nil && openAICompactSupportTier(account) > 0 {
+				compactCapable = append(compactCapable, account)
+			}
+		}
+		if len(compactCapable) > 0 {
+			policyScope = compactCapable
+		}
+	}
+
+	preferred := make([]*Account, 0, len(policyScope))
+	for _, account := range policyScope {
+		if account != nil && account.IsDispatchPreferred() {
+			preferred = append(preferred, account)
+		}
+	}
+	if len(preferred) > 0 {
+		return preferred
+	}
+
+	nonFallback := make([]*Account, 0, len(policyScope))
+	for _, account := range policyScope {
+		if account != nil && !account.IsDispatchFallback() {
+			nonFallback = append(nonFallback, account)
+		}
+	}
+	if len(nonFallback) > 0 {
+		return nonFallback
+	}
+
+	return policyScope
+}
+
+func openAIDispatchPolicyAllowsSticky(account *Account, policyCandidates []*Account) bool {
+	if account == nil {
+		return false
+	}
+	for _, candidate := range policyCandidates {
+		if candidate != nil && candidate.ID == account.ID {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *OpenAIGatewayService) selectAccountForModelWithExclusions(ctx context.Context, groupID *int64, sessionHash string, requestedModel string, excludedIDs map[int64]struct{}, requireCompact bool, stickyAccountID int64, requiredCapability OpenAIEndpointCapability) (*Account, error) {
 	if s.checkChannelPricingRestriction(ctx, groupID, requestedModel) {
 		slog.Warn("channel pricing restriction blocked request",
@@ -1632,22 +1685,25 @@ func (s *OpenAIGatewayService) selectAccountForModelWithExclusions(ctx context.C
 		return nil, fmt.Errorf("%w supporting model: %s (channel pricing restriction)", ErrNoAvailableAccounts, requestedModel)
 	}
 
-	// 1. 尝试粘性会话命中
-	// Try sticky session hit
-	if account := s.tryStickySessionHit(ctx, groupID, sessionHash, requestedModel, excludedIDs, requireCompact, stickyAccountID, requiredCapability); account != nil {
-		return account, nil
-	}
-
-	// 2. 获取可调度的 OpenAI 账号
+	// 1. 获取可调度的 OpenAI 账号
 	// Get schedulable OpenAI accounts
 	accounts, err := s.listSchedulableAccounts(ctx, groupID)
 	if err != nil {
 		return nil, fmt.Errorf("query accounts failed: %w", err)
 	}
 
+	candidates, compactBlocked := s.collectOpenAIAccountCandidates(ctx, groupID, accounts, requestedModel, excludedIDs, requireCompact, requiredCapability)
+	policyCandidates := filterOpenAIDispatchPolicyCandidates(candidates, requireCompact)
+
+	// 2. 尝试粘性会话命中；dispatch_policy 可强制切走 fallback/normal sticky。
+	// Try sticky session hit; dispatch_policy can force escape from fallback/normal sticky.
+	if account := s.tryStickySessionHit(ctx, groupID, sessionHash, requestedModel, excludedIDs, requireCompact, stickyAccountID, requiredCapability, policyCandidates); account != nil {
+		return account, nil
+	}
+
 	// 3. 按优先级 + LRU 选择最佳账号
 	// Select by priority + LRU
-	selected, compactBlocked := s.selectBestAccount(ctx, groupID, accounts, requestedModel, excludedIDs, requireCompact, requiredCapability)
+	selected := s.selectBestOpenAIAccountFromCandidates(policyCandidates, requireCompact)
 
 	if selected == nil {
 		return nil, noAvailableOpenAISelectionError(requestedModel, compactBlocked)
@@ -1672,7 +1728,7 @@ func (s *OpenAIGatewayService) selectAccountForModelWithExclusions(ctx context.C
 //
 // tryStickySessionHit attempts to get account from sticky session.
 // Returns account if hit and usable; clears session and returns nil if account is unavailable.
-func (s *OpenAIGatewayService) tryStickySessionHit(ctx context.Context, groupID *int64, sessionHash, requestedModel string, excludedIDs map[int64]struct{}, requireCompact bool, stickyAccountID int64, requiredCapability OpenAIEndpointCapability) *Account {
+func (s *OpenAIGatewayService) tryStickySessionHit(ctx context.Context, groupID *int64, sessionHash, requestedModel string, excludedIDs map[int64]struct{}, requireCompact bool, stickyAccountID int64, requiredCapability OpenAIEndpointCapability, policyCandidates []*Account) *Account {
 	if sessionHash == "" {
 		return nil
 	}
@@ -1721,6 +1777,10 @@ func (s *OpenAIGatewayService) tryStickySessionHit(ctx context.Context, groupID 
 		_ = s.deleteStickySessionAccountID(ctx, groupID, sessionHash)
 		return nil
 	}
+	if !openAIDispatchPolicyAllowsSticky(account, policyCandidates) {
+		_ = s.deleteStickySessionAccountID(ctx, groupID, sessionHash)
+		return nil
+	}
 
 	// 刷新会话 TTL 并返回账号
 	// Refresh session TTL and return account
@@ -1736,8 +1796,13 @@ func (s *OpenAIGatewayService) tryStickySessionHit(ctx context.Context, groupID 
 // least one candidate was filtered out solely because it lacks compact support
 // (only meaningful when requireCompact=true).
 func (s *OpenAIGatewayService) selectBestAccount(ctx context.Context, groupID *int64, accounts []Account, requestedModel string, excludedIDs map[int64]struct{}, requireCompact bool, requiredCapability OpenAIEndpointCapability) (*Account, bool) {
-	var selected *Account
-	selectedCompactTier := -1
+	candidates, compactBlocked := s.collectOpenAIAccountCandidates(ctx, groupID, accounts, requestedModel, excludedIDs, requireCompact, requiredCapability)
+	candidates = filterOpenAIDispatchPolicyCandidates(candidates, requireCompact)
+	return s.selectBestOpenAIAccountFromCandidates(candidates, requireCompact), compactBlocked
+}
+
+func (s *OpenAIGatewayService) collectOpenAIAccountCandidates(ctx context.Context, groupID *int64, accounts []Account, requestedModel string, excludedIDs map[int64]struct{}, requireCompact bool, requiredCapability OpenAIEndpointCapability) ([]*Account, bool) {
+	candidates := make([]*Account, 0, len(accounts))
 	compactBlocked := false
 	needsUpstreamCheck := s.needsUpstreamChannelRestrictionCheck(ctx, groupID)
 
@@ -1761,11 +1826,25 @@ func (s *OpenAIGatewayService) selectBestAccount(ctx context.Context, groupID *i
 		if needsUpstreamCheck && s.isUpstreamModelRestrictedByChannel(ctx, *groupID, fresh, requestedModel, requireCompact) {
 			continue
 		}
+		if requireCompact && openAICompactSupportTier(fresh) == 0 {
+			compactBlocked = true
+			continue
+		}
+		candidates = append(candidates, fresh)
+	}
+
+	return candidates, compactBlocked
+}
+
+func (s *OpenAIGatewayService) selectBestOpenAIAccountFromCandidates(candidates []*Account, requireCompact bool) *Account {
+	var selected *Account
+	selectedCompactTier := -1
+
+	for _, fresh := range candidates {
 		compactTier := 0
 		if requireCompact {
 			compactTier = openAICompactSupportTier(fresh)
 			if compactTier == 0 {
-				compactBlocked = true
 				continue
 			}
 		}
@@ -1793,7 +1872,7 @@ func (s *OpenAIGatewayService) selectBestAccount(ctx context.Context, groupID *i
 		}
 	}
 
-	return selected, compactBlocked
+	return selected
 }
 
 // isBetterAccount 判断 candidate 是否比 current 更优。
@@ -1894,6 +1973,34 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 		return excluded
 	}
 
+	baseCandidateCount := 0
+	candidates := make([]*Account, 0, len(accounts))
+	for i := range accounts {
+		acc := &accounts[i]
+		if isExcluded(acc.ID) {
+			continue
+		}
+		// Scheduler snapshots can be temporarily stale (bucket rebuild is throttled);
+		// re-check schedulability here so recently rate-limited/overloaded accounts
+		// are not selected again before the bucket is rebuilt.
+		if !isOpenAIAccountEligibleForRequest(ctx, acc, requestedModel, false, requiredCapability) {
+			continue
+		}
+		if s.isOpenAIAccountRuntimeBlocked(acc) {
+			continue
+		}
+		if needsUpstreamCheck && s.isUpstreamModelRestrictedByChannel(ctx, *groupID, acc, requestedModel, requireCompact) {
+			continue
+		}
+		baseCandidateCount++
+		candidates = append(candidates, acc)
+	}
+
+	if len(candidates) == 0 {
+		return nil, ErrNoAvailableAccounts
+	}
+	candidates = filterOpenAIDispatchPolicyCandidates(candidates, requireCompact)
+
 	// ============ Layer 1: Sticky session ============
 	if sessionHash != "" {
 		accountID := stickyAccountID
@@ -1913,6 +2020,8 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 					} else if s.isOpenAIAccountRuntimeBlocked(account) {
 						_ = s.deleteStickySessionAccountID(ctx, groupID, sessionHash)
 					} else if needsUpstreamCheck && s.isUpstreamModelRestrictedByChannel(ctx, *groupID, account, requestedModel, requireCompact) {
+						_ = s.deleteStickySessionAccountID(ctx, groupID, sessionHash)
+					} else if !openAIDispatchPolicyAllowsSticky(account, candidates) {
 						_ = s.deleteStickySessionAccountID(ctx, groupID, sessionHash)
 					} else {
 						result, err := s.tryAcquireAccountSlot(ctx, accountID, account.Concurrency)
@@ -1941,33 +2050,6 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 	}
 
 	// ============ Layer 2: Load-aware selection ============
-	baseCandidateCount := 0
-	candidates := make([]*Account, 0, len(accounts))
-	for i := range accounts {
-		acc := &accounts[i]
-		if isExcluded(acc.ID) {
-			continue
-		}
-		// Scheduler snapshots can be temporarily stale (bucket rebuild is throttled);
-		// re-check schedulability here so recently rate-limited/overloaded accounts
-		// are not selected again before the bucket is rebuilt.
-		if !isOpenAIAccountEligibleForRequest(ctx, acc, requestedModel, false, requiredCapability) {
-			continue
-		}
-		if s.isOpenAIAccountRuntimeBlocked(acc) {
-			continue
-		}
-		if needsUpstreamCheck && s.isUpstreamModelRestrictedByChannel(ctx, *groupID, acc, requestedModel, requireCompact) {
-			continue
-		}
-		baseCandidateCount++
-		candidates = append(candidates, acc)
-	}
-
-	if len(candidates) == 0 {
-		return nil, ErrNoAvailableAccounts
-	}
-
 	accountLoads := make([]AccountWithConcurrency, 0, len(candidates))
 	for _, acc := range candidates {
 		accountLoads = append(accountLoads, AccountWithConcurrency{

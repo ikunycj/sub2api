@@ -2500,6 +2500,11 @@
           <p class="input-hint">{{ t('admin.accounts.billingRateMultiplierHint') }}</p>
         </div>
       </div>
+      <div v-if="form.platform === 'openai'" class="border-t border-gray-200 pt-4 dark:border-dark-600">
+        <label class="input-label">{{ t('admin.accounts.dispatchPolicy.label') }}</label>
+        <Select v-model="dispatchPolicy" :options="dispatchPolicyOptions" />
+        <p class="input-hint">{{ t('admin.accounts.dispatchPolicy.hint') }}</p>
+      </div>
       <div class="border-t border-gray-200 pt-4 dark:border-dark-600">
         <label class="input-label">{{ t('admin.accounts.expiresAt') }}</label>
         <input v-model="expiresAtInput" type="datetime-local" class="input" />
@@ -3414,6 +3419,8 @@ const customErrorCodeInput = ref<number | null>(null)
 const interceptWarmupRequests = ref(false)
 const autoPauseOnExpired = ref(true)
 const openaiPassthroughEnabled = ref(false)
+type DispatchPolicy = '' | 'preferred' | 'fallback'
+const dispatchPolicy = ref<DispatchPolicy>('')
 const openAICompactMode = ref<OpenAICompactMode>('auto')
 const openAIResponsesMode = ref<OpenAIResponsesMode>('auto')
 const openAIEndpointCapabilities = ref<OpenAIEndpointCapability[]>(['chat_completions', 'embeddings'])
@@ -3474,6 +3481,11 @@ const openAICompactModeOptions = computed(() => [
   { value: 'auto', label: t('admin.accounts.openai.compactModeAuto') },
   { value: 'force_on', label: t('admin.accounts.openai.compactModeForceOn') },
   { value: 'force_off', label: t('admin.accounts.openai.compactModeForceOff') }
+])
+const dispatchPolicyOptions = computed(() => [
+  { value: '', label: t('admin.accounts.dispatchPolicy.normal') },
+  { value: 'preferred', label: t('admin.accounts.dispatchPolicy.preferred') },
+  { value: 'fallback', label: t('admin.accounts.dispatchPolicy.fallback') }
 ])
 const openAIResponsesModeOptions = computed(() => [
   { value: 'auto', label: t('admin.accounts.openai.responsesModeAuto') },
@@ -3841,6 +3853,7 @@ watch(
     }
     if (newPlatform !== 'openai') {
       openaiPassthroughEnabled.value = false
+      dispatchPolicy.value = ''
       openAIEndpointCapabilities.value = ['chat_completions', 'embeddings']
       openaiOAuthResponsesWebSocketV2Mode.value = OPENAI_WS_MODE_OFF
       openaiAPIKeyResponsesWebSocketV2Mode.value = OPENAI_WS_MODE_OFF
@@ -4241,6 +4254,7 @@ const resetForm = () => {
   interceptWarmupRequests.value = false
   autoPauseOnExpired.value = true
   openaiPassthroughEnabled.value = false
+  dispatchPolicy.value = ''
   openAICompactMode.value = 'auto'
   openAIResponsesMode.value = 'auto'
   openAIEndpointCapabilities.value = ['chat_completions', 'embeddings']
@@ -4319,6 +4333,11 @@ const buildOpenAIExtra = (base?: Record<string, unknown>): Record<string, unknow
   } else {
     delete extra.openai_passthrough
     delete extra.openai_oauth_passthrough
+  }
+  if (dispatchPolicy.value) {
+    extra.dispatch_policy = dispatchPolicy.value
+  } else {
+    delete extra.dispatch_policy
   }
 
   if (accountCategory.value === 'oauth-based' && codexCLIOnlyEnabled.value) {

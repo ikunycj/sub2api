@@ -634,6 +634,34 @@
         </div>
       </div>
 
+      <!-- OpenAI dispatch policy -->
+      <div v-if="allOpenAI" class="border-t border-gray-200 pt-4 dark:border-dark-600">
+        <div class="mb-3 flex items-center justify-between">
+          <label
+            id="bulk-edit-dispatch-policy-label"
+            class="input-label mb-0"
+            for="bulk-edit-dispatch-policy-enabled"
+          >
+            {{ t('admin.accounts.dispatchPolicy.label') }}
+          </label>
+          <input
+            v-model="enableDispatchPolicy"
+            id="bulk-edit-dispatch-policy-enabled"
+            type="checkbox"
+            aria-controls="bulk-edit-dispatch-policy"
+            class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+          />
+        </div>
+        <div id="bulk-edit-dispatch-policy" :class="!enableDispatchPolicy && 'pointer-events-none opacity-50'">
+          <Select
+            v-model="dispatchPolicy"
+            :options="dispatchPolicyOptions"
+            aria-labelledby="bulk-edit-dispatch-policy-label"
+          />
+          <p class="input-hint">{{ t('admin.accounts.dispatchPolicy.hint') }}</p>
+        </div>
+      </div>
+
       <!-- Status -->
       <div class="border-t border-gray-200 pt-4 dark:border-dark-600">
         <div class="mb-3 flex items-center justify-between">
@@ -1216,6 +1244,8 @@ const allOpenAIAPIKey = computed(() => {
   )
 })
 
+const allOpenAI = computed(() => targetSelectedPlatforms.value.length === 1 && targetSelectedPlatforms.value[0] === 'openai')
+
 // 是否全部为 Anthropic OAuth/SetupToken（RPM 配置仅在此条件下显示）
 const allAnthropicOAuthOrSetupToken = computed(() => {
   return (
@@ -1267,6 +1297,7 @@ const enableCodexCLIOnlyAllowClaudeCode = ref(false)
 const enableOpenAICompactMode = ref(false)
 const enableOpenAICompactModelMapping = ref(false)
 const enableRpmLimit = ref(false)
+const enableDispatchPolicy = ref(false)
 
 // State - field values
 const submitting = ref(false)
@@ -1287,6 +1318,8 @@ const priority = ref(1)
 const rateMultiplier = ref(1)
 const status = ref<'active' | 'inactive'>('active')
 const groupIds = ref<number[]>([])
+type DispatchPolicy = '' | 'preferred' | 'fallback'
+const dispatchPolicy = ref<DispatchPolicy>('')
 const openaiPassthroughEnabled = ref(false)
 const openaiOAuthResponsesWebSocketV2Mode = ref<OpenAIWSMode>(OPENAI_WS_MODE_OFF)
 const openaiAPIKeyResponsesWebSocketV2Mode = ref<OpenAIWSMode>(OPENAI_WS_MODE_OFF)
@@ -1336,6 +1369,11 @@ const openAICompactModeOptions = computed(() => [
   { value: 'auto', label: t('admin.accounts.openai.compactModeAuto') },
   { value: 'force_on', label: t('admin.accounts.openai.compactModeForceOn') },
   { value: 'force_off', label: t('admin.accounts.openai.compactModeForceOff') }
+])
+const dispatchPolicyOptions = computed(() => [
+  { value: '', label: t('admin.accounts.dispatchPolicy.normal') },
+  { value: 'preferred', label: t('admin.accounts.dispatchPolicy.preferred') },
+  { value: 'fallback', label: t('admin.accounts.dispatchPolicy.fallback') }
 ])
 const openAIWSModeConcurrencyHintKey = computed(() =>
   resolveOpenAIWSModeConcurrencyHintKey(openaiOAuthResponsesWebSocketV2Mode.value)
@@ -1465,6 +1503,11 @@ const buildUpdatePayload = (): Record<string, unknown> | null => {
 
   if (enableRateMultiplier.value) {
     updates.rate_multiplier = rateMultiplier.value
+  }
+
+  if (enableDispatchPolicy.value) {
+    const extra = ensureExtra()
+    extra.dispatch_policy = dispatchPolicy.value
   }
 
   if (enableStatus.value) {
@@ -1656,6 +1699,7 @@ const handleSubmit = async () => {
     enableCodexCLIOnlyAllowClaudeCode.value ||
     enableOpenAICompactMode.value ||
     enableOpenAICompactModelMapping.value ||
+    enableDispatchPolicy.value ||
     enableRpmLimit.value ||
     userMsgQueueMode.value !== null
 
@@ -1760,6 +1804,7 @@ watch(
       enableOpenAICompactMode.value = false
       enableOpenAICompactModelMapping.value = false
       enableRpmLimit.value = false
+      enableDispatchPolicy.value = false
 
       // Reset all values
       baseUrl.value = ''
@@ -1777,6 +1822,7 @@ watch(
       rateMultiplier.value = 1
       status.value = 'active'
       groupIds.value = []
+      dispatchPolicy.value = ''
       openaiOAuthResponsesWebSocketV2Mode.value = OPENAI_WS_MODE_OFF
       openaiAPIKeyResponsesWebSocketV2Mode.value = OPENAI_WS_MODE_OFF
       codexCLIOnlyEnabled.value = false

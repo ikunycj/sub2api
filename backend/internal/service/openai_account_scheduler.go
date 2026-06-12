@@ -380,6 +380,10 @@ func (s *defaultOpenAIAccountScheduler) selectBySessionHash(
 		_ = s.service.deleteStickySessionAccountID(ctx, req.GroupID, sessionHash)
 		return nil, false, nil
 	}
+	if !s.dispatchPolicyAllowsSessionSticky(ctx, req, account) {
+		_ = s.service.deleteStickySessionAccountID(ctx, req.GroupID, sessionHash)
+		return nil, false, nil
+	}
 	escapeCfg := s.service.openAIStickyEscapeConfig()
 	if reason, errorRate, ttft, shouldEscape := s.shouldEscapeStickyAccount(accountID, escapeCfg); shouldEscape {
 		slog.Info("sticky_escape_triggered",
@@ -424,6 +428,46 @@ func (s *defaultOpenAIAccountScheduler) selectBySessionHash(
 		}, false, nil
 	}
 	return nil, false, nil
+}
+
+func (s *defaultOpenAIAccountScheduler) dispatchPolicyAllowsSessionSticky(ctx context.Context, req OpenAIAccountScheduleRequest, sticky *Account) bool {
+	if s == nil || s.service == nil || sticky == nil {
+		return false
+	}
+	accounts, err := s.service.listSchedulableAccounts(ctx, req.GroupID)
+	if err != nil || len(accounts) == 0 {
+		return true
+	}
+
+	var schedGroup *Group
+	if req.GroupID != nil && s.service.schedulerSnapshot != nil {
+		schedGroup, _ = s.service.schedulerSnapshot.GetGroupByID(ctx, *req.GroupID)
+	}
+
+	filtered := make([]*Account, 0, len(accounts))
+	for i := range accounts {
+		account := &accounts[i]
+		if req.ExcludedIDs != nil {
+			if _, excluded := req.ExcludedIDs[account.ID]; excluded {
+				continue
+			}
+		}
+		if !account.IsSchedulable() || !account.IsOpenAI() {
+			continue
+		}
+		if schedGroup != nil && schedGroup.RequirePrivacySet && !account.IsPrivacySet() {
+			continue
+		}
+		if !s.isAccountRequestCompatible(ctx, account, req) {
+			continue
+		}
+		if !s.isAccountTransportCompatible(account, req.RequiredTransport) {
+			continue
+		}
+		filtered = append(filtered, account)
+	}
+
+	return openAIDispatchPolicyAllowsSticky(sticky, filterOpenAIDispatchPolicyCandidates(filtered, req.RequireCompact))
 }
 
 func openAIStickyAccountMatchesGroup(account *Account, groupID *int64) bool {
@@ -933,13 +977,16 @@ func (s *defaultOpenAIAccountScheduler) selectByLoadBalance(
 			continue
 		}
 		filtered = append(filtered, account)
+	}
+	filtered = filterOpenAIDispatchPolicyCandidates(filtered, req.RequireCompact)
+	if len(filtered) == 0 {
+		return nil, 0, 0, 0, noAvailableOpenAISelectionError(req.RequestedModel, false)
+	}
+	for _, account := range filtered {
 		loadReq = append(loadReq, AccountWithConcurrency{
 			ID:             account.ID,
 			MaxConcurrency: account.EffectiveLoadFactor(),
 		})
-	}
-	if len(filtered) == 0 {
-		return nil, 0, 0, 0, noAvailableOpenAISelectionError(req.RequestedModel, false)
 	}
 
 	loadMap := map[int64]*AccountLoadInfo{}

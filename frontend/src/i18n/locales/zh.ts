@@ -3761,6 +3761,13 @@ export default {
       priorityHint: '优先级越小的账号优先使用',
       billingRateMultiplier: '账号计费倍率',
       billingRateMultiplierHint: '0 表示不计费，仅影响账号计费',
+      dispatchPolicy: {
+        label: '调度策略',
+        normal: '普通调度',
+        preferred: '强制优先',
+        fallback: '强制兜底',
+        hint: '仅作用于 OpenAI 账号。强制优先账号可用时会覆盖粘性绑定；强制兜底账号仅在没有其它可用账号时使用。'
+      },
       expiresAt: '过期时间',
       expiresAtHint: '留空表示不过期',
       higherPriorityFirst: '数值越小优先级越高',

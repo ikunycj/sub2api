@@ -1319,6 +1319,11 @@
           <p class="input-hint">{{ t('admin.accounts.billingRateMultiplierHint') }}</p>
         </div>
       </div>
+      <div v-if="account?.platform === 'openai'" class="border-t border-gray-200 pt-4 dark:border-dark-600">
+        <label class="input-label">{{ t('admin.accounts.dispatchPolicy.label') }}</label>
+        <Select v-model="dispatchPolicy" :options="dispatchPolicyOptions" />
+        <p class="input-hint">{{ t('admin.accounts.dispatchPolicy.hint') }}</p>
+      </div>
       <div class="border-t border-gray-200 pt-4 dark:border-dark-600">
         <label class="input-label">{{ t('admin.accounts.expiresAt') }}</label>
         <input v-model="expiresAtInput" type="datetime-local" class="input" />
@@ -2578,6 +2583,8 @@ const customBaseUrl = ref('')
 
 // OpenAI 自动透传开关（OAuth/API Key）
 const openaiPassthroughEnabled = ref(false)
+type DispatchPolicy = '' | 'preferred' | 'fallback'
+const dispatchPolicy = ref<DispatchPolicy>('')
 const openAICompactMode = ref<OpenAICompactMode>('auto')
 const openAIResponsesMode = ref<OpenAIResponsesMode>('auto')
 const openAIEndpointCapabilities = ref<OpenAIEndpointCapability[]>(['chat_completions', 'embeddings'])
@@ -2618,6 +2625,11 @@ const openAIWSModeOptions = computed(() => [
   { value: OPENAI_WS_MODE_OFF, label: t('admin.accounts.openai.wsModeOff') },
   { value: OPENAI_WS_MODE_CTX_POOL, label: t('admin.accounts.openai.wsModeCtxPool') },
   { value: OPENAI_WS_MODE_PASSTHROUGH, label: t('admin.accounts.openai.wsModePassthrough') }
+])
+const dispatchPolicyOptions = computed(() => [
+  { value: '', label: t('admin.accounts.dispatchPolicy.normal') },
+  { value: 'preferred', label: t('admin.accounts.dispatchPolicy.preferred') },
+  { value: 'fallback', label: t('admin.accounts.dispatchPolicy.fallback') }
 ])
 const openaiResponsesWebSocketV2Mode = computed({
   get: () => {
@@ -2772,6 +2784,12 @@ const normalizeOpenAIResponsesMode = (mode: unknown): OpenAIResponsesMode => {
     return mode
   }
   return 'auto'
+}
+const normalizeDispatchPolicy = (value: unknown): DispatchPolicy => {
+  if (value === 'preferred' || value === 'fallback') {
+    return value
+  }
+  return ''
 }
 const isOpenAIModelRestrictionDisabled = computed(() =>
   props.account?.platform === 'openai' && openaiPassthroughEnabled.value
@@ -2954,6 +2972,7 @@ const syncFormFromAccount = (newAccount: Account | null) => {
 
   // Load OpenAI passthrough toggle (OpenAI OAuth/API Key)
   openaiPassthroughEnabled.value = false
+  dispatchPolicy.value = ''
   openAICompactMode.value = 'auto'
   openAIResponsesMode.value = 'auto'
   openAIEndpointCapabilities.value = ['chat_completions', 'embeddings']
@@ -2965,6 +2984,9 @@ const syncFormFromAccount = (newAccount: Account | null) => {
   codexImageGenerationBridgeMode.value = 'inherit'
   anthropicPassthroughEnabled.value = false
   webSearchEmulationMode.value = 'default'
+  if (newAccount.platform === 'openai') {
+    dispatchPolicy.value = normalizeDispatchPolicy(extra?.dispatch_policy)
+  }
   if (newAccount.platform === 'openai' && (newAccount.type === 'oauth' || newAccount.type === 'apikey')) {
     openaiPassthroughEnabled.value = extra?.openai_passthrough === true || extra?.openai_oauth_passthrough === true
     openAICompactMode.value = (extra?.openai_compact_mode as OpenAICompactMode) || 'auto'
@@ -4072,10 +4094,22 @@ const handleSubmit = async () => {
       updatePayload.extra = newExtra
     }
 
+    // OpenAI dispatch policy applies to every OpenAI account type.
+    if (props.account.platform === 'openai') {
+      const currentExtra = (updatePayload.extra as Record<string, unknown>) || (props.account.extra as Record<string, unknown>) || {}
+      const newExtra: Record<string, unknown> = { ...currentExtra }
+      if (dispatchPolicy.value) {
+        newExtra.dispatch_policy = dispatchPolicy.value
+      } else {
+        newExtra.dispatch_policy = ''
+      }
+      updatePayload.extra = newExtra
+    }
+
     // For OpenAI OAuth/API Key accounts, handle passthrough mode in extra
-	if (props.account.platform === 'openai' && (props.account.type === 'oauth' || props.account.type === 'apikey')) {
-		const currentExtra = (props.account.extra as Record<string, unknown>) || {}
-		const newExtra: Record<string, unknown> = { ...currentExtra }
+    if (props.account.platform === 'openai' && (props.account.type === 'oauth' || props.account.type === 'apikey')) {
+      const currentExtra = (updatePayload.extra as Record<string, unknown>) || (props.account.extra as Record<string, unknown>) || {}
+      const newExtra: Record<string, unknown> = { ...currentExtra }
       const hadCodexCLIOnlyEnabled = currentExtra.codex_cli_only === true
       if (props.account.type === 'oauth') {
         newExtra.openai_oauth_responses_websockets_v2_mode = openaiOAuthResponsesWebSocketV2Mode.value
