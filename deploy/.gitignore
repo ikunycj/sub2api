@@ -10,6 +10,7 @@ redis_data/
 # Environment configuration (contains sensitive information)
 .env
 config.yaml
+artifact/
 
 # Backup files
 *.backup
