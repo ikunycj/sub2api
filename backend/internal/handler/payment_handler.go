@@ -71,7 +71,7 @@ func (h *PaymentHandler) GetPlans(c *gin.Context) {
 	groupInfo := h.configService.GetGroupInfoMap(c.Request.Context(), plans)
 	result := make([]planWithPlatform, 0, len(plans))
 	for _, p := range plans {
-		groupPlatform := platformMap[p.GroupID]
+		groupPlatform := groupInfo[p.GroupID].Platform
 		if p.GroupID <= 0 {
 			groupPlatform = "balance"
 		}
@@ -173,6 +173,10 @@ type checkoutPlan struct {
 	GroupPlatform               string   `json:"group_platform"`
 	GroupName                   string   `json:"group_name"`
 	RateMultiplier              float64  `json:"rate_multiplier"`
+	PeakRateEnabled             bool     `json:"peak_rate_enabled"`
+	PeakStart                   string   `json:"peak_start"`
+	PeakEnd                     string   `json:"peak_end"`
+	PeakRateMultiplier          float64  `json:"peak_rate_multiplier"`
 	DailyLimitUSD               *float64 `json:"daily_limit_usd"`
 	WeeklyLimitUSD              *float64 `json:"weekly_limit_usd"`
 	MonthlyLimitUSD             *float64 `json:"monthly_limit_usd"`
