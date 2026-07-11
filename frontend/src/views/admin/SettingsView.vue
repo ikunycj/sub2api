@@ -8159,6 +8159,17 @@ type SettingsForm = Omit<
   default_platform_quotas: DefaultPlatformQuotasMap;
 };
 
+type OpenAIAdvancedSchedulerWeightKey =
+  | "openai_advanced_scheduler_weight_priority"
+  | "openai_advanced_scheduler_weight_load"
+  | "openai_advanced_scheduler_weight_queue"
+  | "openai_advanced_scheduler_weight_error_rate"
+  | "openai_advanced_scheduler_weight_ttft"
+  | "openai_advanced_scheduler_weight_reset"
+  | "openai_advanced_scheduler_weight_quota_headroom"
+  | "openai_advanced_scheduler_weight_previous_response"
+  | "openai_advanced_scheduler_weight_session_sticky";
+
 const form = reactive<SettingsForm>({
   registration_enabled: true,
   email_verify_enabled: false,
@@ -8396,6 +8407,74 @@ const form = reactive<SettingsForm>({
   // Allow user view error requests
   allow_user_view_error_requests: false,
 });
+
+const openAIAdvancedSchedulerWeightFields = computed<
+  Array<{ key: OpenAIAdvancedSchedulerWeightKey; label: string; placeholder: string }>
+>(() => [
+  {
+    key: "openai_advanced_scheduler_weight_priority",
+    label: t("admin.settings.openaiExperimentalScheduler.priorityWeight"),
+    placeholder: t("admin.settings.openaiExperimentalScheduler.defaultPlaceholder", {
+      value: form.openai_advanced_scheduler_effective_weight_priority || "-",
+    }),
+  },
+  {
+    key: "openai_advanced_scheduler_weight_load",
+    label: t("admin.settings.openaiExperimentalScheduler.loadWeight"),
+    placeholder: t("admin.settings.openaiExperimentalScheduler.defaultPlaceholder", {
+      value: form.openai_advanced_scheduler_effective_weight_load || "-",
+    }),
+  },
+  {
+    key: "openai_advanced_scheduler_weight_queue",
+    label: t("admin.settings.openaiExperimentalScheduler.queueWeight"),
+    placeholder: t("admin.settings.openaiExperimentalScheduler.defaultPlaceholder", {
+      value: form.openai_advanced_scheduler_effective_weight_queue || "-",
+    }),
+  },
+  {
+    key: "openai_advanced_scheduler_weight_error_rate",
+    label: t("admin.settings.openaiExperimentalScheduler.errorRateWeight"),
+    placeholder: t("admin.settings.openaiExperimentalScheduler.defaultPlaceholder", {
+      value: form.openai_advanced_scheduler_effective_weight_error_rate || "-",
+    }),
+  },
+  {
+    key: "openai_advanced_scheduler_weight_ttft",
+    label: t("admin.settings.openaiExperimentalScheduler.ttftWeight"),
+    placeholder: t("admin.settings.openaiExperimentalScheduler.defaultPlaceholder", {
+      value: form.openai_advanced_scheduler_effective_weight_ttft || "-",
+    }),
+  },
+  {
+    key: "openai_advanced_scheduler_weight_reset",
+    label: t("admin.settings.openaiExperimentalScheduler.resetWeight"),
+    placeholder: t("admin.settings.openaiExperimentalScheduler.defaultPlaceholder", {
+      value: form.openai_advanced_scheduler_effective_weight_reset || "-",
+    }),
+  },
+  {
+    key: "openai_advanced_scheduler_weight_quota_headroom",
+    label: t("admin.settings.openaiExperimentalScheduler.quotaHeadroomWeight"),
+    placeholder: t("admin.settings.openaiExperimentalScheduler.defaultPlaceholder", {
+      value: form.openai_advanced_scheduler_effective_weight_quota_headroom || "-",
+    }),
+  },
+  {
+    key: "openai_advanced_scheduler_weight_previous_response",
+    label: t("admin.settings.openaiExperimentalScheduler.previousResponseWeight"),
+    placeholder: t("admin.settings.openaiExperimentalScheduler.defaultPlaceholder", {
+      value: form.openai_advanced_scheduler_effective_weight_previous_response || "-",
+    }),
+  },
+  {
+    key: "openai_advanced_scheduler_weight_session_sticky",
+    label: t("admin.settings.openaiExperimentalScheduler.sessionStickyWeight"),
+    placeholder: t("admin.settings.openaiExperimentalScheduler.defaultPlaceholder", {
+      value: form.openai_advanced_scheduler_effective_weight_session_sticky || "-",
+    }),
+  },
+]);
 
 const isPaymentFullMode = computed(() => form.payment_display_mode === "payment");
 const isPaymentPlansMode = computed(() => form.payment_display_mode === "plans");
