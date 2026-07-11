@@ -12,11 +12,16 @@ export default {
     switchToDark: '切换到深色模式',
     dashboard: '控制台',
     login: '登录',
-    getStarted: '立即开始',
+    getStarted: '立即开坤',
     goToDashboard: '进入控制台',
+    brandTagline: '只因 API 太美',
     // 新增：面向用户的价值主张
-    heroSubtitle: '一个密钥，畅用多个 AI 模型',
-    heroDescription: '无需管理多个订阅账号，一站式接入 Claude、GPT、Gemini 等主流 AI 服务',
+    heroSubtitle: '只因 API 太美',
+    heroDescription: '订阅转 API、模型路由、额度分发，一站接入。专业底座，懂的人会心一笑。',
+    terminal: {
+      routing: '唱、跳、路由、篮球...',
+      response: '只因响应太快'
+    },
     tags: {
       subscriptionToApi: '订阅转 API',
       stickySession: '会话保持',

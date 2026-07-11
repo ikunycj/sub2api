@@ -12,11 +12,16 @@ export default {
     switchToDark: 'Switch to Dark Mode',
     dashboard: 'Dashboard',
     login: 'Login',
-    getStarted: 'Get Started',
+    getStarted: 'Open Ikun',
     goToDashboard: 'Go to Dashboard',
+    brandTagline: 'API, just because it is beautiful',
     // User-focused value proposition
-    heroSubtitle: 'One Key, All AI Models',
-    heroDescription: 'No need to manage multiple subscriptions. Access Claude, GPT, Gemini and more with a single API key',
+    heroSubtitle: 'Just Because the API Is Beautiful',
+    heroDescription: 'Subscription-to-API, model routing, and quota distribution in one gateway. A serious platform with a little wink.',
+    terminal: {
+      routing: 'sing, dance, route, basketball...',
+      response: 'fast for a reason'
+    },
     tags: {
       subscriptionToApi: 'Subscription to API',
       stickySession: 'Session Persistence',
