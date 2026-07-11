@@ -12,18 +12,18 @@ const i18n = createI18n({
   messages: {
     en: {
       payment: {
-        days: "days",
-        permanent: "Permanent",
-        models: "Models",
-        rechargeNow: "Top Up Now",
+        days: () => "days",
+        permanent: () => "Permanent",
+        models: () => "Models",
+        rechargeNow: () => "Top Up Now",
         planCard: {
-          balanceRecharge: "Balance Top-Up",
-          creditedBalance: "Credited Balance",
-          quota: "Quota",
-          rate: "Rate",
-          unlimited: "Unlimited",
+          balanceRecharge: () => "Balance Top-Up",
+          creditedBalance: () => "Credited Balance",
+          quota: () => "Quota",
+          rate: () => "Rate",
+          unlimited: () => "Unlimited",
         },
-        subscribeNow: "Subscribe now",
+        subscribeNow: () => "Subscribe now",
       },
     },
   },
@@ -88,9 +88,9 @@ describe("SubscriptionPlanCard", () => {
 
     const text = wrapper.text();
 
-    expect(text).toContain("payment.planCard.balanceRecharge");
+    expect(text).toContain("Balance Top-Up");
     expect(text).toContain("¥50");
-    expect(text).toContain("payment.rechargeNow");
+    expect(text).toContain("Top Up Now");
     expect(text).not.toContain("payment.planCard.rate");
   });
 
@@ -113,7 +113,7 @@ describe("SubscriptionPlanCard", () => {
       global: { plugins: [i18n] },
     });
 
-    expect(wrapper.text()).toContain("/ payment.permanent");
+    expect(wrapper.text()).toContain("/ Permanent");
     expect(wrapper.text()).not.toContain("0days");
   });
 });
