@@ -11,7 +11,7 @@
       <!-- Custom Logo or Default Logo -->
       <div class="sidebar-logo flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-amber-100 to-primary-100 ring-1 ring-primary-200/70 shadow-glow dark:from-dark-900 dark:to-primary-950/50 dark:ring-primary-800/50">
         <img v-if="settingsLoaded" :src="siteLogo || '/logo.png'" alt="Logo" class="h-full w-full object-contain" />
-      </router-link>
+      </div>
       <div class="sidebar-brand" :class="{ 'sidebar-brand-collapsed': sidebarCollapsed }" :aria-hidden="sidebarCollapsed ? 'true' : 'false'">
         <router-link
           :to="homePath"
@@ -19,7 +19,7 @@
           @click="handleMenuItemClick(homePath)"
         >
           {{ siteName }}
-        </span>
+        </router-link>
       </div>
     </div>
 
