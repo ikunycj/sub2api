@@ -93,9 +93,9 @@ function methodLabel(method: PaymentMethodOption): string {
 }
 
 function methodSelectedClass(type: string): string {
-  const brandRing = type.includes('alipay')
+  const brandRing = isBuiltInAlipayMethod(type)
     ? 'after:bg-[#02A9F1]'
-    : type.includes('wxpay')
+    : isBuiltInWxpayMethod(type)
       ? 'after:bg-[#09BB07]'
       : type === 'stripe'
         ? 'after:bg-[#676BE5]'

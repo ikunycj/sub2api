@@ -24,6 +24,7 @@ const appStore = vi.hoisted(() => ({
   publicSettingsLoaded: false,
   cachedPublicSettings: null as null | {
     payment_enabled?: boolean
+    payment_display_mode?: 'off' | 'payment' | 'plans'
     risk_control_enabled?: boolean
     custom_menu_items?: []
   },
@@ -173,5 +174,23 @@ describe('feature route guard', () => {
     expect(appStore.fetchPublicSettings).not.toHaveBeenCalled()
     expect(next).toHaveBeenCalledOnce()
     expect(next).toHaveBeenCalledWith(target)
+  })
+
+  it('allows purchase route in plans-only payment display mode', async () => {
+    appStore.cachedPublicSettings = {
+      payment_enabled: false,
+      payment_display_mode: 'plans',
+    }
+    appStore.publicSettingsLoaded = true
+
+    const { navigation, next } = runGuard(
+      { requiresPayment: true, paymentModes: ['payment', 'plans'] },
+      '/purchase'
+    )
+    await navigation
+
+    expect(appStore.fetchPublicSettings).not.toHaveBeenCalled()
+    expect(next).toHaveBeenCalledOnce()
+    expect(next).toHaveBeenCalledWith()
   })
 })

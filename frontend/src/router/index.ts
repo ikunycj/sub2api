@@ -833,26 +833,22 @@ router.beforeEach(async (to, _from, next) => {
     }
   }
 
+  if ((to.meta.requiresPayment || to.meta.requiresRiskControl) && !appStore.publicSettingsLoaded) {
+    try {
+      await appStore.fetchPublicSettings()
+    } catch {
+      // Unknown public feature state should not be treated as explicitly disabled.
+    }
+  }
 
   // Check payment requirement (internal payment system only)
-  if (to.meta.requiresPayment) {
+  if (to.meta.requiresPayment && appStore.publicSettingsLoaded) {
     const paymentMode = resolvePaymentDisplayMode(appStore.cachedPublicSettings)
     const allowedModes = to.meta.paymentModes ?? ['payment']
     if (paymentMode === 'off' || !allowedModes.includes(paymentMode)) {
       next(authStore.isAdmin ? '/admin/dashboard' : '/dashboard')
       return
     }
-  }
-
-  // Only an explicit value from successfully loaded settings can disable a route.
-  // A transient settings failure is unknown state, not a confirmed feature toggle.
-  if (
-    to.meta.requiresPayment &&
-    appStore.publicSettingsLoaded &&
-    appStore.cachedPublicSettings?.payment_enabled === false
-  ) {
-    next(authStore.isAdmin ? '/admin/dashboard' : '/dashboard')
-    return
   }
 
   if (

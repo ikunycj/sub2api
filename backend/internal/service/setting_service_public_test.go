@@ -78,6 +78,21 @@ func TestSettingService_GetPublicSettings_ExposesTablePreferences(t *testing.T) 
 	require.Equal(t, []int{20, 50, 100}, settings.TablePageSizeOptions)
 }
 
+func TestSettingService_GetPublicSettings_ExposesPaymentDisplayModePlans(t *testing.T) {
+	repo := &settingPublicRepoStub{
+		values: map[string]string{
+			SettingPaymentEnabled:     "false",
+			SettingPaymentDisplayMode: PaymentDisplayModePlans,
+		},
+	}
+	svc := NewSettingService(repo, &config.Config{})
+
+	settings, err := svc.GetPublicSettings(context.Background())
+	require.NoError(t, err)
+	require.False(t, settings.PaymentEnabled)
+	require.Equal(t, PaymentDisplayModePlans, settings.PaymentDisplayMode)
+}
+
 func TestSettingService_GetPublicSettings_ExposesForceEmailOnThirdPartySignup(t *testing.T) {
 	repo := &settingPublicRepoStub{
 		values: map[string]string{
