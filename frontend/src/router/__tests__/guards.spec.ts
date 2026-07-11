@@ -84,7 +84,7 @@ function simulateGuard(
       return authState.isAdmin ? '/admin/dashboard' : '/dashboard'
     }
     if (authState.backendModeEnabled && !authState.isAuthenticated) {
-      const allowed = ['/login', '/key-usage', '/setup', '/payment/result']
+      const allowed = ['/home', '/models', '/docs', '/login', '/key-usage', '/setup', '/payment/result', '/payment/airwallex', '/legal']
       const callbackPaths = [
         '/auth/callback',
         '/auth/linuxdo/callback',
@@ -133,7 +133,7 @@ function simulateGuard(
     if (authState.isAuthenticated && authState.isAdmin) {
       return null
     }
-    const allowed = ['/login', '/key-usage', '/setup', '/payment/result']
+    const allowed = ['/home', '/models', '/docs', '/login', '/key-usage', '/setup', '/payment/result', '/payment/airwallex', '/legal']
     const callbackPaths = [
       '/auth/callback',
       '/auth/linuxdo/callback',
@@ -336,7 +336,7 @@ describe('路由守卫逻辑', () => {
   })
 
   describe('Backend Mode', () => {
-    it('unauthenticated: /home redirects to /login', () => {
+    it('unauthenticated: public marketing pages are allowed', () => {
       const authState: MockAuthState = {
         isAuthenticated: false,
         isAdmin: false,
@@ -344,8 +344,9 @@ describe('路由守卫逻辑', () => {
         backendModeEnabled: true,
         hasPendingAuthSession: false,
       }
-      const redirect = simulateGuard('/home', { requiresAuth: false }, authState)
-      expect(redirect).toBe('/login')
+      expect(simulateGuard('/home', { requiresAuth: false }, authState)).toBeNull()
+      expect(simulateGuard('/models', { requiresAuth: false }, authState)).toBeNull()
+      expect(simulateGuard('/docs', { requiresAuth: false }, authState)).toBeNull()
     })
 
     it('unauthenticated: /login is allowed', () => {

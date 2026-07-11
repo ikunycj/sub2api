@@ -19,6 +19,11 @@ const adminComplianceStore = useAdminComplianceStore()
 const adminSettingsStore = useAdminSettingsStore()
 
 function updateDocumentTitle() {
+  // Public anytoken pages own their localized document titles in CloseAiPublicLayout.
+  if (['/home', '/models', '/docs'].includes(route.path)) {
+    return
+  }
+
   const customMenuItems = [
     ...(appStore.cachedPublicSettings?.custom_menu_items ?? []),
     ...(authStore.isAdmin ? adminSettingsStore.customMenuItems : []),
@@ -38,7 +43,12 @@ function updateFavicon(logoUrl: string) {
     link.rel = 'icon'
     document.head.appendChild(link)
   }
-  link.type = logoUrl.endsWith('.svg') ? 'image/svg+xml' : 'image/x-icon'
+  const cleanUrl = logoUrl.split('?')[0]?.toLowerCase() ?? ''
+  link.type = cleanUrl.endsWith('.svg')
+    ? 'image/svg+xml'
+    : cleanUrl.endsWith('.png')
+      ? 'image/png'
+      : 'image/x-icon'
   link.href = logoUrl
 }
 

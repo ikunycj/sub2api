@@ -134,6 +134,13 @@ docs/*
 !docs/PAYMENT.md
 !docs/PAYMENT_CN.md
 !docs/ADMIN_PAYMENT_INTEGRATION_API.md
+!docs/TOB_FRONTEND_PRODUCT_DESIGN_CN.md
+!docs/TOB_FRONTEND_VISUAL_DIRECTIONS_CN.md
+!docs/TOB_FRONTEND_TOKENHUB_INSPIRED_CN.md
+!docs/design-previews/
+!docs/design-previews/*.png
+!docs/design-previews-tokenhub/
+!docs/design-previews-tokenhub/*.png
 !docs/legal/
 !docs/legal/*.md
 .serena/
