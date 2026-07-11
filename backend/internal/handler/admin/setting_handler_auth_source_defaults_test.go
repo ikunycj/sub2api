@@ -159,6 +159,80 @@ func TestSettingHandler_GetSettings_InjectsAuthSourceDefaults(t *testing.T) {
 	require.Len(t, subscriptions, 1)
 }
 
+func TestSettingHandler_GetSettings_IncludesPaymentConfigFields(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := &settingHandlerRepoStub{
+		values: map[string]string{
+			service.SettingPaymentEnabled:                    "false",
+			service.SettingPaymentDisplayMode:                service.PaymentDisplayModePlans,
+			service.SettingSubscriptionUSDToCNYRate:          "7.25",
+			service.SettingBalanceRechargeMult:               "1",
+			service.SettingLoadBalanceStrategy:               "round-robin",
+			service.SettingPaymentVisibleMethodAlipayEnabled: "true",
+			service.SettingPaymentVisibleMethodAlipaySource:  service.VisibleMethodSourceOfficialAlipay,
+			service.SettingPaymentVisibleMethodWxpayEnabled:  "true",
+			service.SettingPaymentVisibleMethodWxpaySource:   service.VisibleMethodSourceOfficialWechat,
+		},
+	}
+	svc := service.NewSettingService(repo, &config.Config{Default: config.DefaultConfig{UserConcurrency: 5}})
+	paymentCfgSvc := service.NewPaymentConfigService(nil, repo, nil)
+	handler := NewSettingHandler(svc, nil, nil, nil, paymentCfgSvc, nil, nil)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/admin/settings", nil)
+
+	handler.GetSettings(c)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	var resp response.Response
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	data, ok := resp.Data.(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, service.PaymentDisplayModePlans, data["payment_display_mode"])
+	require.Equal(t, 7.25, data["payment_subscription_usd_to_cny_rate"])
+	require.Equal(t, false, data["payment_enabled"])
+}
+
+func TestSettingHandler_UpdateSettings_PersistsPaymentDisplayMode(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := &settingHandlerRepoStub{
+		values: map[string]string{
+			service.SettingKeyPromoCodeEnabled: "true",
+			service.SettingPaymentEnabled:      "true",
+			service.SettingPaymentDisplayMode:  service.PaymentDisplayModePayment,
+		},
+	}
+	svc := service.NewSettingService(repo, &config.Config{Default: config.DefaultConfig{UserConcurrency: 5}})
+	paymentCfgSvc := service.NewPaymentConfigService(nil, repo, nil)
+	handler := NewSettingHandler(svc, nil, nil, nil, paymentCfgSvc, nil, nil)
+
+	body := map[string]any{
+		"promo_code_enabled":   true,
+		"payment_display_mode": service.PaymentDisplayModePlans,
+	}
+	rawBody, err := json.Marshal(body)
+	require.NoError(t, err)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPut, "/api/v1/admin/settings", bytes.NewReader(rawBody))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	handler.UpdateSettings(c)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, service.PaymentDisplayModePlans, repo.values[service.SettingPaymentDisplayMode])
+	require.Equal(t, "false", repo.values[service.SettingPaymentEnabled])
+
+	var resp response.Response
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	data, ok := resp.Data.(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, service.PaymentDisplayModePlans, data["payment_display_mode"])
+	require.Equal(t, false, data["payment_enabled"])
+}
+
 func TestSettingHandler_UpdateSettings_PreservesOmittedAuthSourceDefaults(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := &settingHandlerRepoStub{

@@ -19,10 +19,15 @@ describe('PROVIDER_CONFIG_FIELDS.wxpay', () => {
     expect(findField('wxpay', 'certSerial')?.optional).toBeFalsy()
   })
 
-  it('only keeps the simplified visible credential set in the admin form', () => {
-    expect(findField('wxpay', 'mpAppId')).toBeUndefined()
-    expect(findField('wxpay', 'h5AppName')).toBeUndefined()
-    expect(findField('wxpay', 'h5AppUrl')).toBeUndefined()
+  it('exposes optional runtime fields used by JSAPI and H5 flows', () => {
+    expect(findField('wxpay', 'mpAppId')).toMatchObject({ optional: true, clearable: true })
+    expect(findField('wxpay', 'h5AppName')).toMatchObject({ optional: true, clearable: true })
+    expect(findField('wxpay', 'h5AppUrl')).toMatchObject({ optional: true, clearable: true })
+  })
+
+  it('allows optional EasyPay channel IDs to be cleared', () => {
+    expect(findField('easypay', 'cidAlipay')).toMatchObject({ optional: true, clearable: true })
+    expect(findField('easypay', 'cidWxpay')).toMatchObject({ optional: true, clearable: true })
   })
 })
 
@@ -45,6 +50,10 @@ describe('PROVIDER_CONFIG_FIELDS.airwallex', () => {
 
   it('explains that apiBase must match the Airwallex key environment', () => {
     expect(findField('airwallex', 'apiBase')?.hintKey).toBe('admin.settings.payment.field_airwallexApiBaseHint')
+  })
+
+  it('exposes the optional descriptor that the backend forwards to Airwallex', () => {
+    expect(findField('airwallex', 'descriptor')).toMatchObject({ optional: true, clearable: true })
   })
 })
 

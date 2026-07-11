@@ -25,6 +25,7 @@ const {
   deleteProvider,
   fetchPublicSettings,
   adminSettingsFetch,
+  setPaymentDisplayModeLocal,
   showError,
   showSuccess,
 } = vi.hoisted(() => ({
@@ -48,6 +49,7 @@ const {
   deleteProvider: vi.fn(),
   fetchPublicSettings: vi.fn(),
   adminSettingsFetch: vi.fn(),
+  setPaymentDisplayModeLocal: vi.fn(),
   showError: vi.fn(),
   showSuccess: vi.fn(),
 }));
@@ -95,9 +97,19 @@ vi.mock("@/stores", () => ({
   }),
 }));
 
+vi.mock("@/stores/app", () => ({
+  useAppStore: () => ({
+    showError,
+    showSuccess,
+    showWarning: vi.fn(),
+    showInfo: vi.fn(),
+  }),
+}));
+
 vi.mock("@/stores/adminSettings", () => ({
   useAdminSettingsStore: () => ({
     fetch: adminSettingsFetch,
+    setPaymentDisplayModeLocal,
   }),
 }));
 
@@ -470,6 +482,39 @@ const baseSettingsResponse = {
   },
 };
 
+function mockSettingsUpdateResponse(
+  payload: Record<string, unknown>,
+  overrides: Record<string, unknown> = {},
+) {
+  const updated: Record<string, unknown> = {
+    ...baseSettingsResponse,
+    ...overrides,
+    ...payload,
+    smtp_password: "",
+    linuxdo_connect_client_secret: "",
+    dingtalk_connect_client_secret: "",
+    github_oauth_client_secret: "",
+    google_oauth_client_secret: "",
+    wechat_connect_app_secret: "",
+    wechat_connect_open_app_secret: "",
+    wechat_connect_mp_app_secret: "",
+    wechat_connect_mobile_app_secret: "",
+  };
+  if (payload.wechat_connect_app_secret) {
+    updated.wechat_connect_app_secret_configured = true;
+  }
+  if (payload.wechat_connect_open_app_secret) {
+    updated.wechat_connect_open_app_secret_configured = true;
+  }
+  if (payload.wechat_connect_mp_app_secret) {
+    updated.wechat_connect_mp_app_secret_configured = true;
+  }
+  if (payload.wechat_connect_mobile_app_secret) {
+    updated.wechat_connect_mobile_app_secret_configured = true;
+  }
+  return updated;
+}
+
 function mountView() {
   return mount(SettingsView, {
     global: {
@@ -543,15 +588,15 @@ describe("admin SettingsView payment visible method controls", () => {
     deleteProvider.mockReset();
     fetchPublicSettings.mockReset();
     adminSettingsFetch.mockReset();
+    setPaymentDisplayModeLocal.mockReset();
     showError.mockReset();
     showSuccess.mockReset();
     localeRef.value = "zh-CN";
 
     getSettings.mockResolvedValue({ ...baseSettingsResponse });
-    updateSettings.mockImplementation(async (payload) => ({
-      ...baseSettingsResponse,
-      ...payload,
-    }));
+    updateSettings.mockImplementation(async (payload) =>
+      mockSettingsUpdateResponse(payload),
+    );
     getWebSearchEmulationConfig.mockResolvedValue({
       enabled: false,
       providers: [],
@@ -643,6 +688,7 @@ describe("admin SettingsView payment visible method controls", () => {
     await openPaymentTab(wrapper);
     await wrapper.find("form").trigger("submit.prevent");
     await flushPromises();
+    await wrapper.vm.$nextTick();
 
     expect(updateSettings).toHaveBeenCalledTimes(1);
     const payload = updateSettings.mock.calls[0]?.[0];
@@ -928,6 +974,7 @@ describe("admin SettingsView wechat connect controls", () => {
     deleteProvider.mockReset();
     fetchPublicSettings.mockReset();
     adminSettingsFetch.mockReset();
+    setPaymentDisplayModeLocal.mockReset();
     showError.mockReset();
     showSuccess.mockReset();
 
@@ -935,11 +982,11 @@ describe("admin SettingsView wechat connect controls", () => {
       ...baseSettingsResponse,
       payment_visible_method_wxpay_source: "official_wxpay",
     });
-    updateSettings.mockImplementation(async (payload) => ({
-      ...baseSettingsResponse,
-      payment_visible_method_wxpay_source: "official_wxpay",
-      ...payload,
-    }));
+    updateSettings.mockImplementation(async (payload) =>
+      mockSettingsUpdateResponse(payload, {
+        payment_visible_method_wxpay_source: "official_wxpay",
+      }),
+    );
     getWebSearchEmulationConfig.mockResolvedValue({
       enabled: false,
       providers: [],
@@ -1180,10 +1227,9 @@ describe("admin SettingsView platform quota matrix", () => {
     localeRef.value = "zh-CN";
 
     getSettings.mockResolvedValue({ ...baseSettingsResponse });
-    updateSettings.mockImplementation(async (payload) => ({
-      ...baseSettingsResponse,
-      ...payload,
-    }));
+    updateSettings.mockImplementation(async (payload) =>
+      mockSettingsUpdateResponse(payload),
+    );
     getWebSearchEmulationConfig.mockResolvedValue({ enabled: false, providers: [] });
     updateWebSearchEmulationConfig.mockResolvedValue({ enabled: false, providers: [] });
     getAdminApiKey.mockResolvedValue({ exists: false, masked_key: "" });
@@ -1196,6 +1242,7 @@ describe("admin SettingsView platform quota matrix", () => {
     getGroups.mockResolvedValue([]);
     listProxies.mockResolvedValue({ items: [] });
     getProviders.mockResolvedValue({ data: [] });
+    setPaymentDisplayModeLocal.mockReset();
   });
 
   it("从 baseSettings 加载默认平台配额数据并在 Users tab 渲染 5 平台行", async () => {
