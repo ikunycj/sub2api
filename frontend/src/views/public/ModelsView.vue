@@ -24,21 +24,21 @@
 
           <label class="relative block">
             <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-500 dark:text-slate-400">
-              {{ page.providerLabel }}
+              {{ page.platformLabel }}
             </span>
-            <select v-model="selectedProvider" class="h-12 w-full appearance-none rounded-lg border border-slate-200 bg-white pl-16 pr-10 text-sm font-medium text-slate-800 outline-none transition-all duration-200 hover:border-slate-300 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-700">
+            <select v-model="selectedPlatform" class="h-12 w-full appearance-none rounded-lg border border-slate-200 bg-white pl-16 pr-10 text-sm font-medium text-slate-800 outline-none transition-all duration-200 hover:border-slate-300 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-700">
               <option value="all">{{ page.all }}</option>
-              <option v-for="provider in providers" :key="provider" :value="provider">{{ provider }}</option>
+              <option v-for="platform in platforms" :key="platform" :value="platform">{{ platform }}</option>
             </select>
             <Icon name="chevronDown" size="sm" class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" />
           </label>
 
           <label class="relative block">
             <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-500 dark:text-slate-400">
-              {{ page.tagLabel }}
+              {{ page.groupLabel }}
             </span>
-            <select v-model="activeCategory" class="h-12 w-full appearance-none rounded-lg border border-slate-200 bg-white pl-14 pr-10 text-sm font-medium text-slate-800 outline-none transition-all duration-200 hover:border-slate-300 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-700">
-              <option v-for="category in categories" :key="category.value" :value="category.value">{{ category.label }}</option>
+            <select v-model="selectedGroup" class="h-12 w-full appearance-none rounded-lg border border-slate-200 bg-white pl-14 pr-10 text-sm font-medium text-slate-800 outline-none transition-all duration-200 hover:border-slate-300 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-700">
+              <option v-for="group in groupOptions" :key="group.value" :value="group.value">{{ group.label }}</option>
             </select>
             <Icon name="chevronDown" size="sm" class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" />
           </label>
@@ -83,18 +83,18 @@
             {{ page.resultPrefix }} <span class="font-semibold text-slate-900 dark:text-white">{{ filteredModels.length }}</span> {{ page.resultSuffix }}
           </p>
           <div class="flex flex-wrap gap-2">
-            <button
-              v-for="category in categories"
-              :key="category.value"
-              type="button"
-              class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all duration-200"
-              :class="activeCategory === category.value
-                ? 'border-primary-500 bg-primary-500 text-white shadow-sm shadow-primary-500/25'
-                : 'border-slate-200 bg-white text-slate-600 hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-primary-800 dark:hover:bg-primary-950/40 dark:hover:text-primary-200'"
-              @click="activeCategory = category.value"
+            <span
+              v-if="selectedPlatform !== 'all'"
+              class="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
             >
-              {{ category.label }}
-            </button>
+              {{ selectedPlatform }}
+            </span>
+            <span
+              v-if="selectedGroup !== 'all'"
+              class="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+            >
+              {{ page.categories[selectedGroup] }}
+            </span>
           </div>
         </div>
 
@@ -129,6 +129,16 @@
                   </button>
                 </div>
               </div>
+            </div>
+
+            <div class="mt-3 flex flex-wrap gap-1.5">
+              <span
+                v-for="group in model.category"
+                :key="group"
+                class="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+              >
+                {{ page.categories[group] }}
+              </span>
             </div>
 
             <div class="mt-4 flex flex-wrap items-center gap-2">
@@ -174,8 +184,8 @@
         <div v-else class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div class="hidden grid-cols-[minmax(260px,1.4fr)_140px_160px_160px_220px] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400 lg:grid">
             <span>{{ page.listColumns.model }}</span>
-            <span>{{ page.listColumns.provider }}</span>
-            <span>{{ page.listColumns.capability }}</span>
+            <span>{{ page.listColumns.platform }}</span>
+            <span>{{ page.listColumns.group }}</span>
             <span>{{ page.listColumns.context }}</span>
             <span>{{ page.listColumns.price }}</span>
           </div>
@@ -195,7 +205,7 @@
             </div>
             <p class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ model.provider }}</p>
             <div class="flex flex-wrap gap-1.5">
-              <span v-for="tag in model.tags.slice(0, 2)" :key="tag" class="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ tag }}</span>
+              <span v-for="group in model.category.slice(0, 2)" :key="group" class="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ page.categories[group] }}</span>
             </div>
             <p class="text-sm text-slate-600 dark:text-slate-300">{{ model.context }} / {{ model.output }}</p>
             <div class="space-y-1 text-sm">
@@ -218,7 +228,7 @@ import CloseAiPublicLayout from '@/components/public/CloseAiPublicLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { withBrandTokens } from '@/brand'
 
-type Category = 'all' | 'text' | 'reasoning' | 'vision' | 'code' | 'image' | 'audio'
+type GroupKey = 'all' | 'text' | 'reasoning' | 'vision' | 'code' | 'image' | 'audio'
 type ViewMode = 'grid' | 'list'
 
 interface ModelCapability {
@@ -237,7 +247,7 @@ interface ModelItem {
   logoClass: string
   name: string
   id: string
-  category: Category[]
+  category: GroupKey[]
   tags: string[]
   capabilities: ModelCapability[]
   description: string
@@ -249,8 +259,8 @@ interface ModelItem {
 
 const { locale } = useI18n()
 const searchQuery = ref('')
-const activeCategory = ref<Category>('all')
-const selectedProvider = ref('all')
+const selectedGroup = ref<GroupKey>('all')
+const selectedPlatform = ref('all')
 const viewMode = ref<ViewMode>('grid')
 const copiedModelId = ref('')
 
@@ -258,10 +268,10 @@ const messages = {
   zh: {
     metaTitle: '模型广场',
     title: '模型广场',
-    description: '在一个生产级目录中查看 AI 模型价格、能力、端点和供应商覆盖。筛选模型后可直接使用 OpenAI 兼容接口接入 anytoken。',
-    searchPlaceholder: '搜索模型、供应商、标签...',
-    providerLabel: '供应商',
-    tagLabel: '标签',
+    description: '在一个生产级目录中查看 AI 模型价格、能力、平台和分组覆盖。筛选模型后可直接使用 OpenAI 兼容接口接入 anytoken。',
+    searchPlaceholder: '搜索模型、平台、分组...',
+    platformLabel: '平台',
+    groupLabel: '分组选择',
     all: '全部',
     reset: '重置',
     gridView: '宫格视图',
@@ -285,8 +295,8 @@ const messages = {
     },
     listColumns: {
       model: '模型',
-      provider: '供应商',
-      capability: '能力',
+      platform: '平台',
+      group: '分组',
       context: '上下文 / 输出',
       price: '价格',
     },
@@ -467,10 +477,10 @@ const messages = {
   en: {
     metaTitle: 'Model Marketplace',
     title: 'Model Marketplace',
-    description: 'Browse AI model pricing, capabilities, endpoints, and provider coverage in one production catalog. Filter models and connect through the OpenAI-compatible AnyToken API.',
-    searchPlaceholder: 'Search models, providers, tags...',
-    providerLabel: 'Provider',
-    tagLabel: 'Tags',
+    description: 'Browse AI model pricing, capabilities, platforms, and group coverage in one production catalog. Filter models and connect through the OpenAI-compatible AnyToken API.',
+    searchPlaceholder: 'Search models, platforms, groups...',
+    platformLabel: 'Platform',
+    groupLabel: 'Group selection',
     all: 'All',
     reset: 'Reset',
     gridView: 'Grid view',
@@ -494,8 +504,8 @@ const messages = {
     },
     listColumns: {
       model: 'Model',
-      provider: 'Provider',
-      capability: 'Capability',
+      platform: 'Platform',
+      group: 'Group',
       context: 'Context / output',
       price: 'Price',
     },
@@ -514,37 +524,38 @@ const messages = {
 } as const
 
 const page = computed(() => withBrandTokens(locale.value.startsWith('zh') ? messages.zh : messages.en))
-const categories = computed(() => ([
-  { value: 'all' as Category, label: page.value.categories.all },
-  { value: 'text' as Category, label: page.value.categories.text },
-  { value: 'reasoning' as Category, label: page.value.categories.reasoning },
-  { value: 'vision' as Category, label: page.value.categories.vision },
-  { value: 'code' as Category, label: page.value.categories.code },
-  { value: 'image' as Category, label: page.value.categories.image },
-  { value: 'audio' as Category, label: page.value.categories.audio },
+const groupOptions = computed(() => ([
+  { value: 'all' as GroupKey, label: page.value.categories.all },
+  { value: 'text' as GroupKey, label: page.value.categories.text },
+  { value: 'reasoning' as GroupKey, label: page.value.categories.reasoning },
+  { value: 'vision' as GroupKey, label: page.value.categories.vision },
+  { value: 'code' as GroupKey, label: page.value.categories.code },
+  { value: 'image' as GroupKey, label: page.value.categories.image },
+  { value: 'audio' as GroupKey, label: page.value.categories.audio },
 ]))
 const modelCatalog = computed<ModelItem[]>(() => page.value.models)
-const providers = computed(() => Array.from(new Set(modelCatalog.value.map((model) => model.provider))).sort())
+const platforms = computed(() => Array.from(new Set(modelCatalog.value.map((model) => model.provider))))
 
 const filteredModels = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
   return modelCatalog.value.filter((model) => {
-    const matchesCategory = activeCategory.value === 'all' || model.category.includes(activeCategory.value)
-    const matchesProvider = selectedProvider.value === 'all' || model.provider === selectedProvider.value
+    const matchesGroup = selectedGroup.value === 'all' || model.category.includes(selectedGroup.value)
+    const matchesPlatform = selectedPlatform.value === 'all' || model.provider === selectedPlatform.value
     const matchesQuery = !query
       || model.name.toLowerCase().includes(query)
       || model.id.toLowerCase().includes(query)
       || model.provider.toLowerCase().includes(query)
       || model.tags.some((tag) => tag.toLowerCase().includes(query))
+      || model.category.some((category) => page.value.categories[category].toLowerCase().includes(query))
       || model.description.toLowerCase().includes(query)
-    return matchesCategory && matchesProvider && matchesQuery
+    return matchesGroup && matchesPlatform && matchesQuery
   })
 })
 
 function resetFilters() {
   searchQuery.value = ''
-  activeCategory.value = 'all'
-  selectedProvider.value = 'all'
+  selectedGroup.value = 'all'
+  selectedPlatform.value = 'all'
 }
 
 async function copyModelId(id: string) {
