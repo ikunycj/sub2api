@@ -7,7 +7,13 @@
     ]"
   >
     <!-- Logo/Brand -->
-    <div class="sidebar-header" :class="{ 'sidebar-header-collapsed': sidebarCollapsed }">
+    <router-link
+      to="/home"
+      class="sidebar-header"
+      :class="{ 'sidebar-header-collapsed': sidebarCollapsed }"
+      :title="siteName"
+      @click="handleMenuItemClick('/home')"
+    >
       <!-- Custom Logo or Default Logo -->
       <div class="sidebar-logo flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-amber-100 to-primary-100 ring-1 ring-primary-200/70 shadow-glow dark:from-dark-900 dark:to-primary-950/50 dark:ring-primary-800/50">
         <img v-if="settingsLoaded" :src="siteLogo" :alt="siteName" class="h-full w-full object-contain" />
@@ -17,7 +23,7 @@
           {{ siteName }}
         </span>
       </div>
-    </div>
+    </router-link>
 
     <!-- Navigation -->
     <nav class="sidebar-nav scrollbar-hide">

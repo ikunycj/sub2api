@@ -1,141 +1,210 @@
 <template>
   <CloseAiPublicLayout :page-title="page.metaTitle">
-    <section class="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-      <div class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <div class="max-w-4xl">
-          <div class="mb-5 inline-flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-200">
-            <Icon name="grid" size="sm" />
-            <span>{{ page.badge }}</span>
-          </div>
-          <h1 class="break-words text-[2.125rem] font-semibold tracking-normal text-slate-950 max-sm:break-all dark:text-white sm:text-5xl">
+    <section class="bg-white dark:bg-slate-950">
+      <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div class="max-w-5xl">
+          <h1 class="break-words text-[2.375rem] font-semibold tracking-normal text-slate-950 max-sm:break-all dark:text-white sm:text-5xl">
             {{ page.title }}
           </h1>
-          <p class="mt-5 max-w-3xl break-words text-lg leading-8 text-slate-600 dark:text-slate-300">
+          <p class="mt-4 max-w-3xl break-words text-base leading-7 text-slate-600 dark:text-slate-300 sm:text-lg">
             {{ page.description }}
           </p>
+        </div>
+
+        <div class="mt-8 grid gap-3 lg:grid-cols-[minmax(280px,1fr)_minmax(160px,220px)_minmax(160px,220px)_auto_auto] lg:items-center">
+          <label class="relative block">
+            <Icon name="search" size="md" class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              v-model="searchQuery"
+              type="search"
+              :placeholder="page.searchPlaceholder"
+              class="h-12 w-full rounded-lg border border-slate-200 bg-white pl-12 pr-4 text-sm text-slate-900 outline-none transition-all duration-200 placeholder:text-slate-400 hover:border-slate-300 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-800 dark:bg-slate-900 dark:text-white dark:hover:border-slate-700"
+            />
+          </label>
+
+          <label class="relative block">
+            <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-500 dark:text-slate-400">
+              {{ page.providerLabel }}
+            </span>
+            <select v-model="selectedProvider" class="h-12 w-full appearance-none rounded-lg border border-slate-200 bg-white pl-16 pr-10 text-sm font-medium text-slate-800 outline-none transition-all duration-200 hover:border-slate-300 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-700">
+              <option value="all">{{ page.all }}</option>
+              <option v-for="provider in providers" :key="provider" :value="provider">{{ provider }}</option>
+            </select>
+            <Icon name="chevronDown" size="sm" class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" />
+          </label>
+
+          <label class="relative block">
+            <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-500 dark:text-slate-400">
+              {{ page.tagLabel }}
+            </span>
+            <select v-model="activeCategory" class="h-12 w-full appearance-none rounded-lg border border-slate-200 bg-white pl-14 pr-10 text-sm font-medium text-slate-800 outline-none transition-all duration-200 hover:border-slate-300 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-700">
+              <option v-for="category in categories" :key="category.value" :value="category.value">{{ category.label }}</option>
+            </select>
+            <Icon name="chevronDown" size="sm" class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" />
+          </label>
+
+          <button
+            type="button"
+            class="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/5 transition-all duration-200 hover:border-primary-200 hover:bg-primary-50/60 hover:text-primary-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-primary-800 dark:hover:bg-primary-950/30"
+            @click="resetFilters"
+          >
+            <Icon name="refresh" size="sm" />
+            <span>{{ page.reset }}</span>
+          </button>
+
+          <div class="grid h-12 grid-cols-2 rounded-lg border border-slate-200 bg-white p-1 shadow-sm shadow-slate-950/5 dark:border-slate-800 dark:bg-slate-900">
+            <button
+              type="button"
+              class="flex min-w-10 items-center justify-center rounded-md transition-colors"
+              :class="viewMode === 'grid' ? 'bg-primary-50 text-primary-700 dark:bg-primary-950/50 dark:text-primary-200' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'"
+              :title="page.gridView"
+              @click="viewMode = 'grid'"
+            >
+              <Icon name="grid" size="sm" />
+            </button>
+            <button
+              type="button"
+              class="flex min-w-10 items-center justify-center rounded-md transition-colors"
+              :class="viewMode === 'list' ? 'bg-primary-50 text-primary-700 dark:bg-primary-950/50 dark:text-primary-200' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'"
+              :title="page.listView"
+              @click="viewMode = 'list'"
+            >
+              <Icon name="menu" size="sm" />
+            </button>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="bg-slate-50 py-8 dark:bg-slate-950">
+    <section class="bg-slate-50 pb-14 pt-4 dark:bg-slate-950">
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <label class="relative block flex-1">
-              <Icon name="search" size="sm" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                v-model="searchQuery"
-                type="search"
-                :placeholder="page.searchPlaceholder"
-                class="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 outline-none transition-all duration-200 placeholder:text-slate-400 hover:border-slate-300 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:hover:border-slate-600"
-              />
-            </label>
-
-            <div class="flex gap-2 overflow-x-auto">
-              <button
-                v-for="category in categories"
-                :key="category.value"
-                type="button"
-                class="shrink-0 rounded-xl border px-3 py-2 text-sm font-medium transition-all duration-200 ease-out hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
-                :class="activeCategory === category.value
-                  ? 'border-primary-600 bg-primary-500 text-white shadow-sm shadow-primary-500/25'
-                  : 'border-slate-200 bg-white text-slate-700 shadow-sm shadow-slate-950/5 hover:border-primary-200 hover:bg-primary-50/60 hover:text-primary-700 hover:shadow-md hover:shadow-primary-500/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-primary-800 dark:hover:bg-primary-950/30 dark:hover:text-primary-200'"
-                @click="activeCategory = category.value"
-              >
-                {{ category.label }}
-              </button>
-            </div>
+        <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <p class="text-sm text-slate-500 dark:text-slate-400">
+            {{ page.resultPrefix }} <span class="font-semibold text-slate-900 dark:text-white">{{ filteredModels.length }}</span> {{ page.resultSuffix }}
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="category in categories"
+              :key="category.value"
+              type="button"
+              class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all duration-200"
+              :class="activeCategory === category.value
+                ? 'border-primary-500 bg-primary-500 text-white shadow-sm shadow-primary-500/25'
+                : 'border-slate-200 bg-white text-slate-600 hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-primary-800 dark:hover:bg-primary-950/40 dark:hover:text-primary-200'"
+              @click="activeCategory = category.value"
+            >
+              {{ category.label }}
+            </button>
           </div>
         </div>
 
-        <div class="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div class="hidden overflow-x-auto lg:block">
-              <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
-                <thead class="bg-slate-50 dark:bg-slate-950">
-                  <tr>
-                    <th v-for="column in page.columns" :key="column" class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                      {{ column }}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
-                  <tr v-for="model in filteredModels" :key="model.id" class="transition-colors duration-150 hover:bg-primary-50/50 dark:hover:bg-primary-950/20">
-                    <td class="px-5 py-4">
-                      <div class="font-semibold text-slate-950 dark:text-white">{{ model.name }}</div>
-                      <div class="mt-1 font-mono text-xs text-slate-500 dark:text-slate-400">{{ model.id }}</div>
-                    </td>
-                    <td class="px-5 py-4 text-sm text-slate-700 dark:text-slate-200">{{ model.provider }}</td>
-                    <td class="px-5 py-4">
-                      <div class="flex flex-wrap gap-1.5">
-                        <span
-                          v-for="tag in model.tags"
-                          :key="tag"
-                          class="rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-200"
-                        >
-                          {{ tag }}
-                        </span>
-                      </div>
-                    </td>
-                    <td class="px-5 py-4 text-sm text-slate-700 dark:text-slate-200">{{ model.context }}</td>
-                    <td class="px-5 py-4 text-sm text-slate-700 dark:text-slate-200">{{ model.billing }}</td>
-                    <td class="px-5 py-4">
-                      <span class="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                        {{ model.policy }}
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+        <div v-if="filteredModels.length === 0" class="rounded-lg border border-dashed border-slate-300 bg-white px-6 py-16 text-center dark:border-slate-800 dark:bg-slate-900">
+          <Icon name="search" size="xl" class="mx-auto text-slate-300 dark:text-slate-600" />
+          <h2 class="mt-4 text-lg font-semibold text-slate-950 dark:text-white">{{ page.emptyTitle }}</h2>
+          <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ page.emptyDescription }}</p>
+          <button type="button" class="mt-5 inline-flex rounded-lg bg-primary-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-600" @click="resetFilters">
+            {{ page.reset }}
+          </button>
+        </div>
 
-            <div class="grid gap-3 p-4 lg:hidden">
-              <article
-                v-for="model in filteredModels"
-                :key="model.id"
-                class="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950"
-              >
-                <div class="flex min-w-0 items-start justify-between gap-3">
-                  <div class="min-w-0">
-                    <h2 class="font-semibold text-slate-950 dark:text-white">{{ model.name }}</h2>
-                    <p class="mt-1 font-mono text-xs text-slate-500 dark:text-slate-400">{{ model.id }}</p>
-                  </div>
-                  <span class="shrink-0 rounded-md bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-200">
-                    {{ model.provider }}
-                  </span>
-                </div>
-                <div class="mt-4 grid gap-2 text-sm text-slate-600 dark:text-slate-300">
-                  <div>{{ page.mobile.context }}: {{ model.context }}</div>
-                  <div>{{ page.mobile.billing }}: {{ model.billing }}</div>
-                  <div>{{ page.mobile.policy }}: {{ model.policy }}</div>
-                </div>
-                <div class="mt-4 flex flex-wrap gap-1.5">
-                  <span v-for="tag in model.tags" :key="tag" class="rounded-md bg-white px-2 py-1 text-xs dark:bg-slate-900">
-                    {{ tag }}
-                  </span>
-                </div>
-              </article>
-            </div>
-          </div>
-
-          <aside class="grid gap-4 self-start">
-            <div
-              v-for="card in page.sidebar"
-              :key="card.title"
-              class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-              :class="card.highlight ? 'border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/40' : ''"
-            >
-              <div class="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-950 dark:text-white">
-                <Icon :name="card.icon" size="sm" class="text-primary-600 dark:text-primary-300" />
-                {{ card.title }}
+        <div v-else-if="viewMode === 'grid'" class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <article
+            v-for="model in filteredModels"
+            :key="model.id"
+            class="model-card rounded-lg border border-slate-200 bg-white p-6 shadow-sm shadow-slate-950/[0.03] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md hover:shadow-primary-500/10 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-primary-800"
+          >
+            <div class="flex items-start gap-4">
+              <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg" :class="model.logoClass">
+                <span class="text-lg font-semibold">{{ model.logo }}</span>
               </div>
-              <p class="text-sm leading-6 text-slate-600 dark:text-slate-300">{{ card.description }}</p>
-              <router-link v-if="card.to" :to="card.to" class="mt-4 inline-flex items-center gap-2 rounded-full px-1 text-sm font-semibold text-primary-700 transition-colors hover:text-primary-800 focus:outline-none focus:ring-2 focus:ring-primary-500/25 dark:text-primary-300 dark:hover:text-primary-200">
-                {{ card.cta }}
-                <Icon name="arrowRight" size="sm" />
-              </router-link>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-semibold text-slate-500 dark:text-slate-400">{{ model.provider }}</p>
+                <h2 class="mt-1 break-words text-xl font-semibold tracking-normal text-slate-950 dark:text-white">
+                  {{ model.name }}
+                </h2>
+                <div class="mt-2 flex min-w-0 items-center gap-2">
+                  <code class="truncate font-mono text-sm font-semibold text-slate-400 dark:text-slate-500">{{ model.id }}</code>
+                  <button type="button" class="shrink-0 text-slate-400 transition-colors hover:text-primary-600" :title="page.copyId" @click="copyModelId(model.id)">
+                    <Icon :name="copiedModelId === model.id ? 'check' : 'copy'" size="sm" />
+                  </button>
+                </div>
+              </div>
             </div>
-          </aside>
+
+            <div class="mt-4 flex flex-wrap items-center gap-2">
+              <span
+                v-for="capability in model.capabilities"
+                :key="`${capability.from}-${capability.to}`"
+                class="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+              >
+                <span>{{ capability.from }}</span>
+                <Icon name="arrowRight" size="xs" class="text-slate-400" />
+                <span>{{ capability.to }}</span>
+              </span>
+            </div>
+
+            <p class="model-description mt-6 text-sm leading-7 text-slate-600 dark:text-slate-300">
+              {{ model.description }}
+            </p>
+
+            <div class="mt-6 grid grid-cols-3 gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+              <div>
+                <p class="text-xs font-semibold text-slate-400 dark:text-slate-500">{{ page.maxContext }}</p>
+                <p class="mt-1 text-sm font-semibold text-slate-950 dark:text-white">{{ model.context }}</p>
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-slate-400 dark:text-slate-500">{{ page.maxOutput }}</p>
+                <p class="mt-1 text-sm font-semibold text-slate-950 dark:text-white">{{ model.output }}</p>
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-slate-400 dark:text-slate-500">{{ page.releaseDate }}</p>
+                <p class="mt-1 text-sm font-semibold text-slate-950 dark:text-white">{{ model.releaseDate }}</p>
+              </div>
+            </div>
+
+            <div class="mt-5 space-y-2">
+              <div v-for="price in model.prices" :key="price.label" class="grid grid-cols-[6rem,1fr] gap-3 text-sm">
+                <span class="text-slate-400 dark:text-slate-500">{{ price.label }}</span>
+                <span class="text-right font-mono font-semibold text-emerald-700 dark:text-emerald-300">{{ price.value }}</span>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div v-else class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div class="hidden grid-cols-[minmax(260px,1.4fr)_140px_160px_160px_220px] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400 lg:grid">
+            <span>{{ page.listColumns.model }}</span>
+            <span>{{ page.listColumns.provider }}</span>
+            <span>{{ page.listColumns.capability }}</span>
+            <span>{{ page.listColumns.context }}</span>
+            <span>{{ page.listColumns.price }}</span>
+          </div>
+          <article
+            v-for="model in filteredModels"
+            :key="model.id"
+            class="grid gap-4 border-b border-slate-100 px-5 py-5 last:border-b-0 dark:border-slate-800 lg:grid-cols-[minmax(260px,1.4fr)_140px_160px_160px_220px] lg:items-center"
+          >
+            <div class="flex min-w-0 items-center gap-4">
+              <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg" :class="model.logoClass">
+                <span class="font-semibold">{{ model.logo }}</span>
+              </div>
+              <div class="min-w-0">
+                <h2 class="truncate text-base font-semibold text-slate-950 dark:text-white">{{ model.name }}</h2>
+                <p class="mt-1 truncate font-mono text-xs text-slate-500 dark:text-slate-400">{{ model.id }}</p>
+              </div>
+            </div>
+            <p class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ model.provider }}</p>
+            <div class="flex flex-wrap gap-1.5">
+              <span v-for="tag in model.tags.slice(0, 2)" :key="tag" class="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ tag }}</span>
+            </div>
+            <p class="text-sm text-slate-600 dark:text-slate-300">{{ model.context }} / {{ model.output }}</p>
+            <div class="space-y-1 text-sm">
+              <p v-for="price in model.prices.slice(0, 2)" :key="price.label" class="flex justify-between gap-3">
+                <span class="text-slate-400 dark:text-slate-500">{{ price.label }}</span>
+                <span class="font-mono font-semibold text-emerald-700 dark:text-emerald-300">{{ price.value }}</span>
+              </p>
+            </div>
+          </article>
         </div>
       </div>
     </section>
@@ -149,95 +218,297 @@ import CloseAiPublicLayout from '@/components/public/CloseAiPublicLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { withBrandTokens } from '@/brand'
 
-type Category = 'all' | 'text' | 'reasoning' | 'vision' | 'code' | 'audio'
-type SidebarIcon = 'filter' | 'sync' | 'terminal'
+type Category = 'all' | 'text' | 'reasoning' | 'vision' | 'code' | 'image' | 'audio'
+type ViewMode = 'grid' | 'list'
+
+interface ModelCapability {
+  from: string
+  to: string
+}
+
+interface ModelPrice {
+  label: string
+  value: string
+}
 
 interface ModelItem {
   provider: string
+  logo: string
+  logoClass: string
   name: string
   id: string
   category: Category[]
   tags: string[]
+  capabilities: ModelCapability[]
+  description: string
   context: string
-  billing: string
-  policy: string
+  output: string
+  releaseDate: string
+  prices: ModelPrice[]
 }
 
 const { locale } = useI18n()
 const searchQuery = ref('')
 const activeCategory = ref<Category>('all')
+const selectedProvider = ref('all')
+const viewMode = ref<ViewMode>('grid')
+const copiedModelId = ref('')
 
 const messages = {
   zh: {
     metaTitle: '模型广场',
-    badge: '模型价格与 API 目录',
     title: '模型广场',
-    description: '集中展示供应商、模型 ID、模态、上下文和计费口径。anytoken 额外提供企业可用的路由策略、预算控制和审计入口。',
-    searchPlaceholder: '搜索模型、供应商或模型 ID',
+    description: '在一个生产级目录中查看 AI 模型价格、能力、端点和供应商覆盖。筛选模型后可直接使用 OpenAI 兼容接口接入 anytoken。',
+    searchPlaceholder: '搜索模型、供应商、标签...',
+    providerLabel: '供应商',
+    tagLabel: '标签',
+    all: '全部',
+    reset: '重置',
+    gridView: '宫格视图',
+    listView: '列表视图',
+    copyId: '复制模型 ID',
+    resultPrefix: '共找到',
+    resultSuffix: '个模型',
+    emptyTitle: '没有匹配的模型',
+    emptyDescription: '换一个关键词，或重置筛选条件后再试。',
+    maxContext: '最大上下文',
+    maxOutput: '最大输出',
+    releaseDate: '发布日期',
     categories: {
       all: '全部',
       text: '文本',
       reasoning: '推理',
       vision: '视觉',
       code: '代码',
+      image: '图像',
       audio: '音频',
     },
-    columns: ['模型', '供应商', '能力', '上下文', '计费口径', '推荐策略'],
-    mobile: {
-      context: '上下文',
-      billing: '计费口径',
-      policy: '推荐策略',
+    listColumns: {
+      model: '模型',
+      provider: '供应商',
+      capability: '能力',
+      context: '上下文 / 输出',
+      price: '价格',
     },
-    sidebar: [
-      { icon: 'filter' as SidebarIcon, title: '公开页负责发现', description: '模型广场面向售前和开发者解释有哪些模型、适合什么场景、如何接入。', cta: '', to: '', highlight: false },
-      { icon: 'sync' as SidebarIcon, title: '企业版负责治理', description: '真实开通、额度、供应商 Key、路由和 fallback 仍在控制台完成。', cta: '', to: '', highlight: false },
-      { icon: 'terminal' as SidebarIcon, title: 'OpenAI 兼容接入', description: '使用现有 SDK，把 base URL 切换为 anytoken.com 统一端点。', cta: '查看接入文档', to: '/docs', highlight: true },
-    ],
     models: [
-      { provider: 'OpenAI', name: 'GPT-4.1', id: 'openai/gpt-4.1', category: ['text', 'reasoning', 'code'], tags: ['文本', '推理', '代码'], context: '1M', billing: '实际费率', policy: '质量优先' },
-      { provider: 'Anthropic', name: 'Claude Sonnet 4', id: 'anthropic/claude-sonnet-4', category: ['text', 'reasoning', 'code'], tags: ['文本', '长上下文', '代码'], context: '200K', billing: '实际费率', policy: '长文档' },
-      { provider: 'Google', name: 'Gemini 2.5 Pro', id: 'google/gemini-2.5-pro', category: ['text', 'reasoning', 'vision'], tags: ['文本', '视觉', '长上下文'], context: '大上下文', billing: '实际费率', policy: '多模态' },
-      { provider: 'DeepSeek', name: 'DeepSeek V3', id: 'deepseek/deepseek-chat', category: ['text', 'code'], tags: ['文本', '代码', '成本'], context: '128K', billing: '实际费率', policy: '成本优先' },
-      { provider: 'Qwen', name: 'Qwen Max', id: 'qwen/qwen-max', category: ['text', 'reasoning'], tags: ['文本', '中文'], context: '中文友好', billing: '实际费率', policy: '中文业务' },
-      { provider: 'OpenAI', name: 'GPT-4o mini', id: 'openai/gpt-4o-mini', category: ['text', 'vision'], tags: ['文本', '视觉', '高并发'], context: '通用', billing: '实际费率', policy: '高并发' },
-      { provider: 'OpenAI', name: 'Embedding Large', id: 'openai/text-embedding-3-large', category: ['text'], tags: ['向量检索', '知识库'], context: '向量化', billing: '实际费率', policy: '知识库' },
-      { provider: 'OpenAI', name: 'Audio Transcribe', id: 'openai/audio-transcribe', category: ['audio'], tags: ['音频', '转写'], context: '音频', billing: '实际费率', policy: '语音处理' },
+      {
+        provider: 'DeepSeek',
+        logo: 'D',
+        logoClass: 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-200',
+        name: 'DeepSeek V4 Pro',
+        id: 'deepseek-v4-pro',
+        category: ['text', 'reasoning', 'code'],
+        tags: ['文本', '推理', '代码'],
+        capabilities: [{ from: 'T', to: 'T' }],
+        description: 'DeepSeek V4 Pro 被描述为大规模 MoE 模型，拥有 16T 总参数与 49B 激活参数，并支持 1M token 上下文窗口，适合复杂推理与代码任务。',
+        context: '1M',
+        output: '384K',
+        releaseDate: '2026年4月24日',
+        prices: [
+          { label: '输入', value: '¥12.6 / 百万 Token' },
+          { label: '输出', value: '¥24.5 / 百万 Token' },
+          { label: '缓存读取', value: '¥0.105 / 百万 Token' },
+        ],
+      },
+      {
+        provider: 'DeepSeek',
+        logo: 'D',
+        logoClass: 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-200',
+        name: 'DeepSeek V4 Flash',
+        id: 'deepseek-v4-flash',
+        category: ['text', 'reasoning', 'code'],
+        tags: ['文本', '推理', '低延迟'],
+        capabilities: [{ from: 'T', to: 'T' }],
+        description: 'DeepSeek V4 Flash 保留 V4 系列的长上下文能力，但采用更轻量的 MoE 配置，适合高并发、低成本和常规生产流量。',
+        context: '1M',
+        output: '384K',
+        releaseDate: '2026年4月24日',
+        prices: [
+          { label: '输入', value: '¥1.05 / 百万 Token' },
+          { label: '输出', value: '¥2.1 / 百万 Token' },
+          { label: '缓存读取', value: '¥0.021 / 百万 Token' },
+        ],
+      },
+      {
+        provider: 'Alibaba',
+        logo: 'Q',
+        logoClass: 'bg-violet-50 text-violet-600 dark:bg-violet-950/50 dark:text-violet-200',
+        name: 'Qwen3.7 Plus',
+        id: 'qwen3.7-plus',
+        category: ['text', 'reasoning', 'vision'],
+        tags: ['中文', '视觉', 'Agent'],
+        capabilities: [{ from: 'T', to: 'T' }, { from: 'I', to: 'T' }],
+        description: 'Qwen3.7 Plus 延续 Qwen 面向 Agent 的设计方向，强化文本和图片输入能力，适合中文业务、工具调用和多模态理解。',
+        context: '1M',
+        output: '64K',
+        releaseDate: '2026年6月2日',
+        prices: [
+          { label: '输入', value: '¥2 / 百万 Token' },
+          { label: '输出', value: '¥8 / 百万 Token' },
+          { label: '缓存读取', value: '¥0.4 / 百万 Token' },
+        ],
+      },
+      {
+        provider: 'DeepSeek',
+        logo: 'D',
+        logoClass: 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-200',
+        name: 'DeepSeek R1',
+        id: 'deepseek-r1',
+        category: ['text', 'reasoning', 'code'],
+        tags: ['推理', '数学', '代码'],
+        capabilities: [{ from: 'T', to: 'T' }],
+        description: 'DeepSeek R1 是 DeepSeek 的推理型模型，常被提到的特点是开放推理过程，以及在数学、逻辑和代码任务上的表现。',
+        context: '128K',
+        output: '32.8K',
+        releaseDate: '2025年1月20日',
+        prices: [
+          { label: '输入', value: '¥4 / 百万 Token' },
+          { label: '输出', value: '¥16 / 百万 Token' },
+          { label: '缓存读取', value: '¥1 / 百万 Token' },
+        ],
+      },
+      {
+        provider: 'DeepSeek',
+        logo: 'D',
+        logoClass: 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-200',
+        name: 'DeepSeek V3',
+        id: 'deepseek-v3',
+        category: ['text', 'code'],
+        tags: ['文本', '代码', '成本'],
+        capabilities: [{ from: 'T', to: 'T' }],
+        description: 'DeepSeek V3 是 V3 系列的通用 MoE 基座模型，适合聊天、代码生成、结构化输出和常规生产接口调用。',
+        context: '128K',
+        output: '16K',
+        releaseDate: '2024年12月26日',
+        prices: [
+          { label: '输入', value: '¥2 / 百万 Token' },
+          { label: '输出', value: '¥8 / 百万 Token' },
+          { label: '缓存读取', value: '¥0.5 / 百万 Token' },
+        ],
+      },
+      {
+        provider: 'DeepSeek',
+        logo: 'D',
+        logoClass: 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-200',
+        name: 'DeepSeek V3.1 Terminus',
+        id: 'deepseek-v3.1-terminus',
+        category: ['text', 'reasoning', 'code'],
+        tags: ['Agent', '稳定性', '代码'],
+        capabilities: [{ from: 'T', to: 'T' }],
+        description: 'DeepSeek V3.1 Terminus 是 V3.1 系列的升级版本，重点在语言一致性、更稳定的 Agent 行为和复杂任务执行。',
+        context: '128K',
+        output: '64K',
+        releaseDate: '2025年9月22日',
+        prices: [
+          { label: '输入', value: '¥4 / 百万 Token' },
+          { label: '输出', value: '¥12 / 百万 Token' },
+          { label: '缓存读取', value: '¥1 / 百万 Token' },
+        ],
+      },
+      {
+        provider: 'OpenAI',
+        logo: 'O',
+        logoClass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-200',
+        name: 'GPT-4.1',
+        id: 'gpt-4.1',
+        category: ['text', 'reasoning', 'code', 'vision'],
+        tags: ['文本', '视觉', '代码'],
+        capabilities: [{ from: 'T', to: 'T' }, { from: 'I', to: 'T' }],
+        description: 'GPT-4.1 面向通用生产任务，覆盖复杂文本、视觉理解、代码和工具调用，适合作为质量优先的默认模型。',
+        context: '1M',
+        output: '32K',
+        releaseDate: '2025年4月14日',
+        prices: [
+          { label: '输入', value: '按实时渠道价' },
+          { label: '输出', value: '按实时渠道价' },
+          { label: '缓存读取', value: '按实时渠道价' },
+        ],
+      },
+      {
+        provider: 'Google',
+        logo: 'G',
+        logoClass: 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-200',
+        name: 'Gemini 2.5 Pro',
+        id: 'gemini-2.5-pro',
+        category: ['text', 'reasoning', 'vision', 'code'],
+        tags: ['长上下文', '视觉', '推理'],
+        capabilities: [{ from: 'T', to: 'T' }, { from: 'I', to: 'T' }],
+        description: 'Gemini 2.5 Pro 适合长上下文、多模态理解和复杂推理场景，可用于文档分析、代码审查和跨模态业务流。',
+        context: '1M',
+        output: '64K',
+        releaseDate: '2025年6月17日',
+        prices: [
+          { label: '输入', value: '按实时渠道价' },
+          { label: '输出', value: '按实时渠道价' },
+          { label: '缓存读取', value: '按实时渠道价' },
+        ],
+      },
+      {
+        provider: 'OpenAI',
+        logo: 'I',
+        logoClass: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/50 dark:text-cyan-200',
+        name: 'Image Generation',
+        id: 'gpt-image-1',
+        category: ['image', 'vision'],
+        tags: ['图像', '多模态'],
+        capabilities: [{ from: 'T', to: 'I' }, { from: 'I', to: 'I' }],
+        description: '图像生成模型适合商品图、海报、设计素材和多轮图像编辑，可通过统一网关纳入同一套额度与审计。',
+        context: '图像',
+        output: '图像',
+        releaseDate: '2025年4月',
+        prices: [
+          { label: '输入', value: '按图像规格' },
+          { label: '输出', value: '按图像规格' },
+          { label: '缓存读取', value: '-' },
+        ],
+      },
     ] satisfies ModelItem[],
   },
   en: {
     metaTitle: 'Model Marketplace',
-    badge: 'Model pricing and API catalog',
     title: 'Model Marketplace',
-    description: 'Browse providers, model IDs, modalities, context windows, and billing conventions. anytoken adds enterprise routing, budget, and audit signals.',
-    searchPlaceholder: 'Search model, provider, or model ID',
+    description: 'Browse AI model pricing, capabilities, endpoints, and provider coverage in one production catalog. Filter models and connect through the OpenAI-compatible AnyToken API.',
+    searchPlaceholder: 'Search models, providers, tags...',
+    providerLabel: 'Provider',
+    tagLabel: 'Tags',
+    all: 'All',
+    reset: 'Reset',
+    gridView: 'Grid view',
+    listView: 'List view',
+    copyId: 'Copy model ID',
+    resultPrefix: 'Showing',
+    resultSuffix: 'models',
+    emptyTitle: 'No matching models',
+    emptyDescription: 'Try another keyword or reset the filters.',
+    maxContext: 'Max context',
+    maxOutput: 'Max output',
+    releaseDate: 'Released',
     categories: {
       all: 'All',
       text: 'Text',
       reasoning: 'Reasoning',
       vision: 'Vision',
       code: 'Code',
+      image: 'Image',
       audio: 'Audio',
     },
-    columns: ['Model', 'Provider', 'Capabilities', 'Context', 'Billing', 'Policy'],
-    mobile: {
-      context: 'Context',
-      billing: 'Billing',
-      policy: 'Policy',
+    listColumns: {
+      model: 'Model',
+      provider: 'Provider',
+      capability: 'Capability',
+      context: 'Context / output',
+      price: 'Price',
     },
-    sidebar: [
-      { icon: 'filter' as SidebarIcon, title: 'Public discovery', description: 'The marketplace explains which models exist, what they are good at, and how developers connect.', cta: '', to: '', highlight: false },
-      { icon: 'sync' as SidebarIcon, title: 'Enterprise governance', description: 'Activation, quotas, provider keys, routing, and fallback remain in the console.', cta: '', to: '', highlight: false },
-      { icon: 'terminal' as SidebarIcon, title: 'OpenAI-compatible access', description: 'Keep your SDK and switch the base URL to the anytoken.com unified endpoint.', cta: 'Read docs', to: '/docs', highlight: true },
-    ],
     models: [
-      { provider: 'OpenAI', name: 'GPT-4.1', id: 'openai/gpt-4.1', category: ['text', 'reasoning', 'code'], tags: ['Text', 'Reasoning', 'Code'], context: '1M', billing: 'Live rate', policy: 'Quality first' },
-      { provider: 'Anthropic', name: 'Claude Sonnet 4', id: 'anthropic/claude-sonnet-4', category: ['text', 'reasoning', 'code'], tags: ['Text', 'Long', 'Code'], context: '200K', billing: 'Live rate', policy: 'Long docs' },
-      { provider: 'Google', name: 'Gemini 2.5 Pro', id: 'google/gemini-2.5-pro', category: ['text', 'reasoning', 'vision'], tags: ['Text', 'Vision', 'Long'], context: 'Large', billing: 'Live rate', policy: 'Multimodal' },
-      { provider: 'DeepSeek', name: 'DeepSeek V3', id: 'deepseek/deepseek-chat', category: ['text', 'code'], tags: ['Text', 'Code', 'Cost'], context: '128K', billing: 'Live rate', policy: 'Cost first' },
-      { provider: 'Qwen', name: 'Qwen Max', id: 'qwen/qwen-max', category: ['text', 'reasoning'], tags: ['Text', 'Chinese'], context: 'Chinese', billing: 'Live rate', policy: 'Chinese business' },
-      { provider: 'OpenAI', name: 'GPT-4o mini', id: 'openai/gpt-4o-mini', category: ['text', 'vision'], tags: ['Text', 'Vision', 'Fast'], context: 'General', billing: 'Live rate', policy: 'High throughput' },
-      { provider: 'OpenAI', name: 'Embedding Large', id: 'openai/text-embedding-3-large', category: ['text'], tags: ['Embedding', 'RAG'], context: 'Vectors', billing: 'Live rate', policy: 'Knowledge base' },
-      { provider: 'OpenAI', name: 'Audio Transcribe', id: 'openai/audio-transcribe', category: ['audio'], tags: ['Audio', 'Transcription'], context: 'Audio', billing: 'Live rate', policy: 'Speech workflows' },
+      { provider: 'DeepSeek', logo: 'D', logoClass: 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-200', name: 'DeepSeek V4 Pro', id: 'deepseek-v4-pro', category: ['text', 'reasoning', 'code'], tags: ['Text', 'Reasoning', 'Code'], capabilities: [{ from: 'T', to: 'T' }], description: 'DeepSeek V4 Pro is positioned as a large-scale MoE model with a 1M token context window, suited for complex reasoning and code workflows.', context: '1M', output: '384K', releaseDate: 'Apr 24, 2026', prices: [{ label: 'Input', value: '¥12.6 / MTok' }, { label: 'Output', value: '¥24.5 / MTok' }, { label: 'Cache read', value: '¥0.105 / MTok' }] },
+      { provider: 'DeepSeek', logo: 'D', logoClass: 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-200', name: 'DeepSeek V4 Flash', id: 'deepseek-v4-flash', category: ['text', 'reasoning', 'code'], tags: ['Text', 'Reasoning', 'Fast'], capabilities: [{ from: 'T', to: 'T' }], description: 'DeepSeek V4 Flash keeps the long-context profile while using a lighter MoE configuration for high-throughput production traffic.', context: '1M', output: '384K', releaseDate: 'Apr 24, 2026', prices: [{ label: 'Input', value: '¥1.05 / MTok' }, { label: 'Output', value: '¥2.1 / MTok' }, { label: 'Cache read', value: '¥0.021 / MTok' }] },
+      { provider: 'Alibaba', logo: 'Q', logoClass: 'bg-violet-50 text-violet-600 dark:bg-violet-950/50 dark:text-violet-200', name: 'Qwen3.7 Plus', id: 'qwen3.7-plus', category: ['text', 'reasoning', 'vision'], tags: ['Chinese', 'Vision', 'Agent'], capabilities: [{ from: 'T', to: 'T' }, { from: 'I', to: 'T' }], description: 'Qwen3.7 Plus is oriented toward agentic workflows and multimodal understanding, with strong Chinese-language business coverage.', context: '1M', output: '64K', releaseDate: 'Jun 2, 2026', prices: [{ label: 'Input', value: '¥2 / MTok' }, { label: 'Output', value: '¥8 / MTok' }, { label: 'Cache read', value: '¥0.4 / MTok' }] },
+      { provider: 'DeepSeek', logo: 'D', logoClass: 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-200', name: 'DeepSeek R1', id: 'deepseek-r1', category: ['text', 'reasoning', 'code'], tags: ['Reasoning', 'Math', 'Code'], capabilities: [{ from: 'T', to: 'T' }], description: 'DeepSeek R1 is a reasoning model often used for math, logic, coding, and tasks where transparent reasoning behavior matters.', context: '128K', output: '32.8K', releaseDate: 'Jan 20, 2025', prices: [{ label: 'Input', value: '¥4 / MTok' }, { label: 'Output', value: '¥16 / MTok' }, { label: 'Cache read', value: '¥1 / MTok' }] },
+      { provider: 'DeepSeek', logo: 'D', logoClass: 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-200', name: 'DeepSeek V3', id: 'deepseek-v3', category: ['text', 'code'], tags: ['Text', 'Code', 'Cost'], capabilities: [{ from: 'T', to: 'T' }], description: 'DeepSeek V3 is a general MoE base model suitable for chat, code generation, structured output, and cost-sensitive production calls.', context: '128K', output: '16K', releaseDate: 'Dec 26, 2024', prices: [{ label: 'Input', value: '¥2 / MTok' }, { label: 'Output', value: '¥8 / MTok' }, { label: 'Cache read', value: '¥0.5 / MTok' }] },
+      { provider: 'DeepSeek', logo: 'D', logoClass: 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-200', name: 'DeepSeek V3.1 Terminus', id: 'deepseek-v3.1-terminus', category: ['text', 'reasoning', 'code'], tags: ['Agent', 'Stable', 'Code'], capabilities: [{ from: 'T', to: 'T' }], description: 'DeepSeek V3.1 Terminus improves language consistency, stable agent behavior, and complex execution flows for V3.1-series workloads.', context: '128K', output: '64K', releaseDate: 'Sep 22, 2025', prices: [{ label: 'Input', value: '¥4 / MTok' }, { label: 'Output', value: '¥12 / MTok' }, { label: 'Cache read', value: '¥1 / MTok' }] },
+      { provider: 'OpenAI', logo: 'O', logoClass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-200', name: 'GPT-4.1', id: 'gpt-4.1', category: ['text', 'reasoning', 'code', 'vision'], tags: ['Text', 'Vision', 'Code'], capabilities: [{ from: 'T', to: 'T' }, { from: 'I', to: 'T' }], description: 'GPT-4.1 covers complex text, vision understanding, code, and tool calls, making it a quality-first default model choice.', context: '1M', output: '32K', releaseDate: 'Apr 14, 2025', prices: [{ label: 'Input', value: 'Live route rate' }, { label: 'Output', value: 'Live route rate' }, { label: 'Cache read', value: 'Live route rate' }] },
+      { provider: 'Google', logo: 'G', logoClass: 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-200', name: 'Gemini 2.5 Pro', id: 'gemini-2.5-pro', category: ['text', 'reasoning', 'vision', 'code'], tags: ['Long context', 'Vision', 'Reasoning'], capabilities: [{ from: 'T', to: 'T' }, { from: 'I', to: 'T' }], description: 'Gemini 2.5 Pro is suited for long-context, multimodal understanding, and complex reasoning across documents and code.', context: '1M', output: '64K', releaseDate: 'Jun 17, 2025', prices: [{ label: 'Input', value: 'Live route rate' }, { label: 'Output', value: 'Live route rate' }, { label: 'Cache read', value: 'Live route rate' }] },
+      { provider: 'OpenAI', logo: 'I', logoClass: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/50 dark:text-cyan-200', name: 'Image Generation', id: 'gpt-image-1', category: ['image', 'vision'], tags: ['Image', 'Multimodal'], capabilities: [{ from: 'T', to: 'I' }, { from: 'I', to: 'I' }], description: 'Image generation supports product visuals, posters, creative assets, and image editing through the same governed gateway.', context: 'Image', output: 'Image', releaseDate: 'Apr 2025', prices: [{ label: 'Input', value: 'By image size' }, { label: 'Output', value: 'By image size' }, { label: 'Cache read', value: '-' }] },
     ] satisfies ModelItem[],
   },
 } as const
@@ -249,19 +520,58 @@ const categories = computed(() => ([
   { value: 'reasoning' as Category, label: page.value.categories.reasoning },
   { value: 'vision' as Category, label: page.value.categories.vision },
   { value: 'code' as Category, label: page.value.categories.code },
+  { value: 'image' as Category, label: page.value.categories.image },
   { value: 'audio' as Category, label: page.value.categories.audio },
 ]))
 const modelCatalog = computed<ModelItem[]>(() => page.value.models)
+const providers = computed(() => Array.from(new Set(modelCatalog.value.map((model) => model.provider))).sort())
+
 const filteredModels = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
   return modelCatalog.value.filter((model) => {
     const matchesCategory = activeCategory.value === 'all' || model.category.includes(activeCategory.value)
+    const matchesProvider = selectedProvider.value === 'all' || model.provider === selectedProvider.value
     const matchesQuery = !query
       || model.name.toLowerCase().includes(query)
       || model.id.toLowerCase().includes(query)
       || model.provider.toLowerCase().includes(query)
       || model.tags.some((tag) => tag.toLowerCase().includes(query))
-    return matchesCategory && matchesQuery
+      || model.description.toLowerCase().includes(query)
+    return matchesCategory && matchesProvider && matchesQuery
   })
 })
+
+function resetFilters() {
+  searchQuery.value = ''
+  activeCategory.value = 'all'
+  selectedProvider.value = 'all'
+}
+
+async function copyModelId(id: string) {
+  copiedModelId.value = id
+  try {
+    await navigator.clipboard?.writeText(id)
+  } catch {
+    // Clipboard access can be blocked in non-secure preview contexts.
+  }
+  window.setTimeout(() => {
+    if (copiedModelId.value === id) {
+      copiedModelId.value = ''
+    }
+  }, 1400)
+}
 </script>
+
+<style scoped>
+.model-card {
+  min-height: 24.5rem;
+}
+
+.model-description {
+  display: -webkit-box;
+  min-height: 5.25rem;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+</style>
