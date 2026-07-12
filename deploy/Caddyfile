@@ -6,8 +6,8 @@ closeai.xiaoba.blog {
 	# =========================================================================
 	@static {
 		path /assets/*
+		path /brands/*
 		path /logo.png
-		path /favicon.ico
 	}
 	header @static {
 		Cache-Control "public, max-age=31536000, immutable"

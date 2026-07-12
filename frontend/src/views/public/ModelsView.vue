@@ -147,6 +147,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import CloseAiPublicLayout from '@/components/public/CloseAiPublicLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
+import { withBrandTokens } from '@/brand'
 
 type Category = 'all' | 'text' | 'reasoning' | 'vision' | 'code' | 'audio'
 type SidebarIcon = 'filter' | 'sync' | 'terminal'
@@ -241,7 +242,7 @@ const messages = {
   },
 } as const
 
-const page = computed(() => locale.value.startsWith('zh') ? messages.zh : messages.en)
+const page = computed(() => withBrandTokens(locale.value.startsWith('zh') ? messages.zh : messages.en))
 const categories = computed(() => ([
   { value: 'all' as Category, label: page.value.categories.all },
   { value: 'text' as Category, label: page.value.categories.text },

@@ -5,19 +5,19 @@ export default {
   theme: {
     extend: {
       colors: {
-        // 主色调 - ikun.love 篮球暖橙
+        // 主色调由品牌配置在运行时注入，保留 alpha 语法兼容 Tailwind opacity。
         primary: {
-          50: '#fff8ed',
-          100: '#ffefd0',
-          200: '#ffdaa1',
-          300: '#ffbe6b',
-          400: '#ff9832',
-          500: '#f97316',
-          600: '#ea580c',
-          700: '#c2410c',
-          800: '#9a3412',
-          900: '#7c2d12',
-          950: '#431407'
+          50: 'rgb(var(--color-primary-50) / <alpha-value>)',
+          100: 'rgb(var(--color-primary-100) / <alpha-value>)',
+          200: 'rgb(var(--color-primary-200) / <alpha-value>)',
+          300: 'rgb(var(--color-primary-300) / <alpha-value>)',
+          400: 'rgb(var(--color-primary-400) / <alpha-value>)',
+          500: 'rgb(var(--color-primary-500) / <alpha-value>)',
+          600: 'rgb(var(--color-primary-600) / <alpha-value>)',
+          700: 'rgb(var(--color-primary-700) / <alpha-value>)',
+          800: 'rgb(var(--color-primary-800) / <alpha-value>)',
+          900: 'rgb(var(--color-primary-900) / <alpha-value>)',
+          950: 'rgb(var(--color-primary-950) / <alpha-value>)'
         },
         // 功能辅助色 - 低饱和青绿，用于图表和非品牌强调
         secondary: {
@@ -81,20 +81,21 @@ export default {
       boxShadow: {
         glass: '0 8px 32px rgba(0, 0, 0, 0.08)',
         'glass-sm': '0 4px 16px rgba(0, 0, 0, 0.06)',
-        glow: '0 0 20px rgba(249, 115, 22, 0.24)',
-        'glow-lg': '0 0 40px rgba(249, 115, 22, 0.32)',
+        glow: '0 0 20px rgb(var(--color-primary-500) / 0.24)',
+        'glow-lg': '0 0 40px rgb(var(--color-primary-500) / 0.32)',
         card: '0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06)',
         'card-hover': '0 10px 40px rgba(0, 0, 0, 0.08)',
         'inner-glow': 'inset 0 1px 0 rgba(255, 255, 255, 0.1)'
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-primary': 'linear-gradient(135deg, #f59e0b 0%, #f97316 52%, #c2410c 100%)',
+        'gradient-primary':
+          'linear-gradient(135deg, rgb(var(--color-primary-400)) 0%, rgb(var(--color-primary-500)) 52%, rgb(var(--color-primary-700)) 100%)',
         'gradient-dark': 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
         'gradient-glass':
           'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
         'mesh-gradient':
-          'radial-gradient(at 12% 8%, rgba(245, 158, 11, 0.16) 0px, transparent 48%), radial-gradient(at 84% 4%, rgba(249, 115, 22, 0.12) 0px, transparent 44%), radial-gradient(at 70% 72%, rgba(13, 148, 136, 0.06) 0px, transparent 46%)'
+          'radial-gradient(at 12% 8%, rgb(var(--color-primary-400) / 0.16) 0px, transparent 48%), radial-gradient(at 84% 4%, rgb(var(--color-primary-500) / 0.12) 0px, transparent 44%), radial-gradient(at 70% 72%, rgba(13, 148, 136, 0.06) 0px, transparent 46%)'
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-out',
@@ -132,8 +133,8 @@ export default {
           '100%': { backgroundPosition: '200% 0' }
         },
         glow: {
-          '0%': { boxShadow: '0 0 20px rgba(249, 115, 22, 0.24)' },
-          '100%': { boxShadow: '0 0 30px rgba(249, 115, 22, 0.38)' }
+          '0%': { boxShadow: '0 0 20px rgb(var(--color-primary-500) / 0.24)' },
+          '100%': { boxShadow: '0 0 30px rgb(var(--color-primary-500) / 0.38)' }
         }
       },
       backdropBlur: {

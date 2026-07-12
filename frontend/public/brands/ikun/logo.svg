@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title>ikun.love</title>
+  <rect width="128" height="128" rx="28" fill="#f97316"/>
+  <circle cx="64" cy="34" r="10" fill="#fff7ed"/>
+  <path fill="#fff7ed" d="M52 54h24v50H52z"/>
+  <path fill="#fed7aa" d="M46 104h36v10H46z" opacity=".95"/>
+</svg>

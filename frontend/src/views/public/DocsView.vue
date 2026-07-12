@@ -164,6 +164,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import CloseAiPublicLayout from '@/components/public/CloseAiPublicLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
+import { withBrandTokens } from '@/brand'
 
 type TextBlock = { type: 'paragraph'; content: string }
 type CodeBlock = { type: 'code'; label: string; content: string }
@@ -485,7 +486,7 @@ function integrationsPage(): DocPage {
   }
 }
 
-const page = computed<DocPage>(() => {
+const rawPage = computed<DocPage>(() => {
   const path = route.path.replace(/\/$/, '') || '/docs'
   if (path === '/docs') return overviewPage()
   if (path === '/docs/integrations') return integrationsPage()
@@ -495,6 +496,7 @@ const page = computed<DocPage>(() => {
   if (path.startsWith('/docs/api/')) return apiPage(path.split('/').pop() || 'chat')
   return overviewPage()
 })
+const page = computed<DocPage>(() => withBrandTokens(rawPage.value))
 
 const activeNavigationClass = 'bg-primary-50 font-medium text-primary-700 dark:bg-primary-950/40 dark:text-primary-200'
 const idleNavigationClass = 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white'

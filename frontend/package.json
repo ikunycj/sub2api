@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:ikun": "vite --mode ikun",
+    "dev:anytoken": "vite --mode anytoken",
     "build": "vue-tsc -b && vite build",
+    "build:ikun": "vue-tsc -b && vite build --mode ikun",
+    "build:anytoken": "vue-tsc -b && vite build --mode anytoken",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
     "lint:check": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts",

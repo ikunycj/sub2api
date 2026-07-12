@@ -8,6 +8,7 @@ import { ref, computed } from 'vue'
 import type { Toast, ToastType, PublicSettings } from '@/types'
 import { i18n } from '@/i18n'
 import { getPublicSettings as fetchPublicSettingsAPI } from '@/api/auth'
+import { activeBrand } from '@/brand'
 
 export const useAppStore = defineStore('app', () => {
   // ==================== State ====================
@@ -20,8 +21,8 @@ export const useAppStore = defineStore('app', () => {
   // Public settings cache state
   const publicSettingsLoaded = ref<boolean>(false)
   const publicSettingsLoading = ref<boolean>(false)
-  const siteName = ref<string>('Ikun')
-  const siteLogo = ref<string>('/logo.png')
+  const siteName = ref<string>(activeBrand.siteName)
+  const siteLogo = ref<string>(activeBrand.logo)
   const siteVersion = ref<string>('')
   const contactInfo = ref<string>('')
   const apiBaseUrl = ref<string>('')
@@ -228,8 +229,8 @@ export const useAppStore = defineStore('app', () => {
       window.__APP_CONFIG__ = { ...config }
     }
     cachedPublicSettings.value = config
-    siteName.value = config.site_name || 'Ikun'
-    siteLogo.value = config.site_logo || '/logo.png'
+    siteName.value = config.site_name || activeBrand.siteName
+    siteLogo.value = config.site_logo || activeBrand.logo
     siteVersion.value = config.version || ''
     contactInfo.value = config.contact_info || ''
     apiBaseUrl.value = config.api_base_url || ''

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title>AnyToken</title>
+  <rect width="128" height="128" rx="28" fill="#2563eb"/>
+  <path fill="#fff" d="M29.8 101.5 54.4 31.9c3.1-8.7 16-8.7 19.2 0l24.6 69.6H84.4l-5.1-15.6H48.5l-5.1 15.6H29.8Zm23.9-28.2h20.4L64 42.7 53.7 73.3Z"/>
+  <path fill="#bfdbfe" d="M55.2 79.6h17.6l-8.8 8.1-8.8-8.1Z"/>
+</svg>

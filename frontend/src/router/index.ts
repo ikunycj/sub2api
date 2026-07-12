@@ -13,6 +13,7 @@ import { useRoutePrefetch } from '@/composables/useRoutePrefetch'
 import { getSetupStatus } from '@/api/setup'
 import { resolveCompletedSetupRedirectPath } from './setupRedirect'
 import { resolveDocumentTitle } from './title'
+import { activeBrand } from '@/brand'
 
 type PaymentDisplayMode = 'off' | 'payment' | 'plans'
 
@@ -49,6 +50,10 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: false,
       title: 'Models'
     }
+  },
+  {
+    path: '/model',
+    redirect: '/models'
   },
   {
     path: '/docs',
@@ -765,7 +770,7 @@ router.beforeEach(async (to, _from, next) => {
     const menuItem = publicItems.find((item) => item.id === id)
       ?? (authStore.isAdmin ? adminSettingsStore.customMenuItems.find((item) => item.id === id) : undefined)
     if (menuItem?.label) {
-      const siteName = appStore.siteName || 'Ikun'
+      const siteName = appStore.siteName || activeBrand.siteName
       document.title = `${menuItem.label} - ${siteName}`
     } else {
       document.title = resolveDocumentTitle(to.meta.title, appStore.siteName, to.meta.titleKey as string)

@@ -19,7 +19,7 @@ const adminComplianceStore = useAdminComplianceStore()
 const adminSettingsStore = useAdminSettingsStore()
 
 function updateDocumentTitle() {
-  // Public anytoken pages own their localized document titles in CloseAiPublicLayout.
+  // Public brand pages own their localized document titles in CloseAiPublicLayout.
   if (['/home', '/models', '/docs'].includes(route.path)) {
     return
   }

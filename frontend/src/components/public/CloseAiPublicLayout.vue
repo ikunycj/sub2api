@@ -2,11 +2,11 @@
   <div class="min-h-screen overflow-x-clip bg-slate-50 text-slate-950 dark:bg-slate-950 dark:text-white">
     <header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/92">
       <nav class="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-3 sm:gap-3 sm:px-6 lg:px-8">
-        <router-link to="/home" class="group flex min-w-0 items-center gap-2" aria-label="anytoken">
-          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-500 text-sm font-semibold text-white shadow-sm shadow-primary-500/25 transition-transform duration-200 group-hover:scale-95">
-            a
+        <router-link to="/home" class="group flex min-w-0 items-center gap-2" :aria-label="brandName">
+          <span class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white shadow-sm shadow-primary-500/25 ring-1 ring-primary-100 transition-transform duration-200 group-hover:scale-95 dark:bg-slate-900 dark:ring-primary-900/50">
+            <img :src="brandLogo" :alt="brandName" class="h-full w-full object-contain" />
           </span>
-          <span class="hidden min-w-0 truncate text-sm font-semibold tracking-normal text-slate-950 dark:text-white min-[420px]:inline">anytoken</span>
+          <span class="hidden min-w-0 truncate text-sm font-semibold tracking-normal text-slate-950 dark:text-white min-[420px]:inline">{{ brandName }}</span>
         </router-link>
 
         <div class="hidden items-center gap-1 md:flex">
@@ -71,8 +71,10 @@
       <div class="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1.2fr_0.8fr_0.8fr] lg:px-8">
         <div>
           <div class="mb-3 flex items-center gap-3">
-            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-primary-500 text-sm font-semibold text-white">a</span>
-            <span class="font-semibold text-slate-950 dark:text-white">anytoken</span>
+            <span class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-white ring-1 ring-primary-100 dark:bg-slate-900 dark:ring-primary-900/50">
+              <img :src="brandLogo" :alt="brandName" class="h-full w-full object-contain" />
+            </span>
+            <span class="font-semibold text-slate-950 dark:text-white">{{ brandName }}</span>
           </div>
           <p class="max-w-md text-sm leading-6 text-slate-600 dark:text-slate-300">
             {{ copy.footerIntro }}
@@ -89,10 +91,10 @@
         <div>
           <h2 class="mb-3 text-sm font-semibold text-slate-950 dark:text-white">{{ copy.endpoint }}</h2>
           <code class="block overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
-            https://api.anytoken.com/v1
+            {{ brandEndpoint }}
           </code>
           <p class="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
-            © 2026 anytoken. anytoken.com
+            © 2026 {{ brandName }}. {{ brandDomain }}
           </p>
         </div>
       </div>
@@ -104,9 +106,11 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useAuthStore } from '@/stores'
+import { useAppStore, useAuthStore } from '@/stores'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import Icon from '@/components/icons/Icon.vue'
+import { activeBrand } from '@/brand'
+import { sanitizeUrl } from '@/utils/url'
 
 const props = defineProps<{
   pageTitle?: string
@@ -114,35 +118,14 @@ const props = defineProps<{
 
 const route = useRoute()
 const { locale } = useI18n()
+const appStore = useAppStore()
 const authStore = useAuthStore()
 const isDark = ref(document.documentElement.classList.contains('dark'))
-
-const messages = {
-  zh: {
-    home: '首页',
-    models: '模型广场',
-    docs: '文档',
-    start: '开始使用',
-    product: '服务 AI 团队',
-    endpoint: '统一端点',
-    footerIntro: 'anytoken 基础设施为企业团队提供统一模型目录、OpenAI 兼容网关、路由、预算和审计能力。',
-    lightMode: '切换到浅色模式',
-    darkMode: '切换到深色模式',
-  },
-  en: {
-    home: 'Home',
-    models: 'Models',
-    docs: 'Docs',
-    start: 'Start',
-    product: 'For AI teams',
-    endpoint: 'Endpoint',
-    footerIntro: 'anytoken infrastructure gives enterprise teams a unified model catalog, OpenAI-compatible gateway, routing, budgets, and auditability.',
-    lightMode: 'Switch to light mode',
-    darkMode: 'Switch to dark mode',
-  },
-} as const
-
-const copy = computed(() => locale.value.startsWith('zh') ? messages.zh : messages.en)
+const brandName = computed(() => appStore.siteName || activeBrand.siteName)
+const brandLogo = computed(() => sanitizeUrl(appStore.siteLogo || activeBrand.logo, { allowRelative: true, allowDataUrl: true }) || activeBrand.logo)
+const brandDomain = computed(() => activeBrand.domain)
+const brandEndpoint = computed(() => activeBrand.apiBaseUrl)
+const copy = computed(() => locale.value.startsWith('zh') ? activeBrand.publicLayout.zh : activeBrand.publicLayout.en)
 const navItems = computed(() => [
   { to: '/home', label: copy.value.home },
   { to: '/models', label: copy.value.models },
@@ -165,10 +148,10 @@ function toggleTheme() {
 
 function syncDocumentTitle() {
   const title = props.pageTitle?.trim()
-  document.title = title ? `${title} - anytoken` : 'anytoken'
+  document.title = title ? `${title} - ${brandName.value}` : brandName.value
 }
 
-watch([() => props.pageTitle, () => locale.value, () => route.fullPath], () => nextTick(syncDocumentTitle), {
+watch([() => props.pageTitle, () => locale.value, () => route.fullPath, () => brandName.value], () => nextTick(syncDocumentTitle), {
   immediate: true
 })
 
