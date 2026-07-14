@@ -7415,6 +7415,11 @@
         :show="showPlanDialog"
         :plan="editingPlan"
         :groups="subscriptionGroups"
+        :payment-config="{
+          subscription_usd_to_cny_rate:
+            Number(form.payment_subscription_usd_to_cny_rate) || 0,
+          recharge_fee_rate: Number(form.payment_recharge_fee_rate) || 0,
+        }"
         :initial-external-subscribe-enabled="planEditInitialExternalSubscribeEnabled"
         @close="showPlanDialog = false"
         @saved="handlePlanSaved"
