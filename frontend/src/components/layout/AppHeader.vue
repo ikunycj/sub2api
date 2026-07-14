@@ -1,5 +1,5 @@
 <template>
-  <header class="glass sticky top-0 z-30 border-b border-amber-200/70 shadow-sm shadow-amber-950/5 dark:border-primary-900/30 dark:shadow-black/20">
+  <header class="glass sticky top-0 z-30 border-b border-primary-200/70 shadow-sm shadow-primary-950/5 dark:border-primary-900/30 dark:shadow-black/20">
     <div class="flex h-16 items-center justify-between px-4 md:px-6">
       <!-- Left: Mobile Menu Toggle + Page Title -->
       <div class="flex items-center gap-4">
@@ -47,7 +47,7 @@
         <!-- Balance Display -->
         <div
           v-if="user"
-          class="hidden items-center gap-2 rounded-xl border border-primary-200/80 bg-gradient-to-r from-primary-50 to-amber-50 px-3 py-1.5 shadow-sm shadow-primary-500/10 dark:border-primary-800/45 dark:from-primary-950/45 dark:to-dark-900 sm:flex"
+          class="hidden items-center gap-2 rounded-xl border border-primary-200/80 bg-gradient-to-r from-primary-50 to-primary-100 px-3 py-1.5 shadow-sm shadow-primary-500/10 dark:border-primary-800/45 dark:from-primary-950/45 dark:to-dark-900 sm:flex"
         >
           <svg
             class="h-4 w-4 text-primary-600 dark:text-primary-400"
@@ -74,7 +74,7 @@
             class="flex items-center gap-2 rounded-xl p-1.5 transition-colors hover:bg-primary-50 dark:hover:bg-primary-950/35"
             aria-label="User Menu"
           >
-            <div class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-amber-400 via-primary-500 to-primary-700 text-sm font-medium text-white shadow-sm shadow-primary-500/25">
+            <div class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-primary-400 via-primary-500 to-primary-700 text-sm font-medium text-white shadow-sm shadow-primary-500/25">
               <img
                 v-if="avatarUrl"
                 :src="avatarUrl"

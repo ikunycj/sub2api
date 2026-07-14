@@ -42,6 +42,22 @@ func TestResolve_NoGroupID(t *testing.T) {
 	require.Equal(t, "litellm", resolved.Source)
 }
 
+func TestResolve_GroupIDWithoutChannelServiceUsesBasePricing(t *testing.T) {
+	bs := newTestBillingServiceForResolver()
+	r := NewModelPricingResolver(nil, bs)
+	groupID := int64(7)
+
+	resolved := r.Resolve(context.Background(), PricingInput{
+		Model:   "claude-sonnet-4",
+		GroupID: &groupID,
+	})
+
+	require.NotNil(t, resolved)
+	require.Equal(t, BillingModeToken, resolved.Mode)
+	require.NotNil(t, resolved.BasePricing)
+	require.InDelta(t, 3e-6, resolved.BasePricing.InputPricePerToken, 1e-12)
+}
+
 func TestResolve_UnknownModel(t *testing.T) {
 	bs := newTestBillingServiceForResolver()
 	r := NewModelPricingResolver(&ChannelService{}, bs)

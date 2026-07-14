@@ -2,58 +2,29 @@ import { defineConfig, loadEnv, Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import checker from 'vite-plugin-checker'
 import { resolve } from 'path'
+import { DEFAULT_BRAND_ENV, PRIMARY_COLOR_SCHEMES } from './src/brand/palettes'
+import type { BrandColorScale, BrandPrimaryScheme } from './src/brand/palettes'
 
-type ViteBrandKey = 'ikun' | 'anytoken'
-type ViteBrandColorStep = '50' | '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900' | '950'
-type ViteBrandConfig = {
+type ViteSiteConfig = {
   siteName: string
-  favicon: string
-  primary: Record<ViteBrandColorStep, string>
+  logo: string
+  primaryScheme: BrandPrimaryScheme
+  primary: BrandColorScale
 }
 
-const viteBrandConfigs = {
-  ikun: {
-    siteName: 'ikun.love',
-    favicon: '/brands/ikun/logo.svg',
-    primary: {
-      50: '#fff8ed',
-      100: '#ffefd0',
-      200: '#ffdaa1',
-      300: '#ffbe6b',
-      400: '#ff9832',
-      500: '#f97316',
-      600: '#ea580c',
-      700: '#c2410c',
-      800: '#9a3412',
-      900: '#7c2d12',
-      950: '#431407',
-    },
-  },
-  anytoken: {
-    siteName: 'AnyToken',
-    favicon: '/brands/anytoken/logo.svg',
-    primary: {
-      50: '#eff6ff',
-      100: '#dbeafe',
-      200: '#bfdbfe',
-      300: '#93c5fd',
-      400: '#60a5fa',
-      500: '#2563eb',
-      600: '#1d4ed8',
-      700: '#1e40af',
-      800: '#1e3a8a',
-      900: '#172554',
-      950: '#0f172a',
-    },
-  },
-} satisfies Record<ViteBrandKey, ViteBrandConfig>
+function resolveViteSiteConfig(env: Record<string, string>): ViteSiteConfig {
+  const siteName = env.VITE_SITE_NAME?.trim() || DEFAULT_BRAND_ENV.siteName
+  const logo = env.VITE_SITE_LOGO?.trim() || DEFAULT_BRAND_ENV.logo
+  const primaryScheme = (env.VITE_PRIMARY_SCHEME?.trim().toLowerCase() || DEFAULT_BRAND_ENV.primaryScheme) as BrandPrimaryScheme
+  const primary = PRIMARY_COLOR_SCHEMES[primaryScheme]
 
-function resolveViteBrandConfig(value?: string): ViteBrandConfig {
-  const normalized = (value || 'ikun').trim().toLowerCase()
-  if (normalized in viteBrandConfigs) {
-    return viteBrandConfigs[normalized as ViteBrandKey]
+  if (!primary) {
+    throw new Error(
+      `Unsupported VITE_PRIMARY_SCHEME "${env.VITE_PRIMARY_SCHEME}". Supported schemes: ${Object.keys(PRIMARY_COLOR_SCHEMES).join(', ')}`,
+    )
   }
-  throw new Error(`Unsupported VITE_BRAND "${value}". Supported brands: ${Object.keys(viteBrandConfigs).join(', ')}`)
+
+  return { siteName, logo, primaryScheme, primary }
 }
 
 function hexToRgbChannels(hex: string): string {
@@ -68,8 +39,8 @@ function hexToRgbChannels(hex: string): string {
   ].join(' ')
 }
 
-function getViteBrandCssText(brand: ViteBrandConfig): string {
-  return Object.entries(brand.primary)
+function getPrimaryCssText(primary: BrandColorScale): string {
+  return Object.entries(primary)
     .map(([step, color]) => `--color-primary-${step}: ${hexToRgbChannels(color)};`)
     .join(' ')
 }
@@ -81,24 +52,53 @@ function iconMimeType(iconUrl: string): string {
   return 'image/x-icon'
 }
 
-function injectBrandDefaults(brand: ViteBrandConfig): Plugin {
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function injectSiteDefaults(site: ViteSiteConfig): Plugin {
   return {
-    name: 'inject-brand-defaults',
+    name: 'inject-site-defaults',
     transformIndexHtml: {
       order: 'pre',
       handler(html) {
-        const iconTag = `<link rel="icon" type="${iconMimeType(brand.favicon)}" href="${brand.favicon}" />`
-        const title = `<title>${brand.siteName}</title>`
-        const themeStyle = `<style id="brand-theme">:root{${getViteBrandCssText(brand)}}</style>`
-        const withIcon = html.match(/<link\s+rel="icon"[^>]*>/i)
-          ? html.replace(/<link\s+rel="icon"[^>]*>/i, iconTag)
-          : html.replace('</head>', `${iconTag}\n</head>`)
+        const siteName = escapeHtml(site.siteName)
+        const logo = escapeHtml(site.logo)
+        const description = escapeHtml(`${site.siteName} provides OpenAI-compatible access to OpenAI and Claude models, with selected models priced from as low as 1/50 of official API rates.`)
+        const iconTag = `<link rel="icon" type="${iconMimeType(site.logo)}" href="${logo}" />`
+        const title = `<title>${siteName}</title>`
+        const themeStyle = `<style id="site-theme">:root{${getPrimaryCssText(site.primary)}}</style>`
+        const seoTags = [
+          '<meta name="robots" content="index,follow" />',
+          `<meta name="description" content="${description}" />`,
+          '<meta property="og:type" content="website" />',
+          `<meta property="og:title" content="${siteName}" />`,
+          `<meta property="og:description" content="${description}" />`,
+          `<meta property="og:image" content="${logo}" />`,
+          '<meta name="twitter:card" content="summary" />',
+          `<meta name="twitter:title" content="${siteName}" />`,
+          `<meta name="twitter:description" content="${description}" />`,
+          `<meta name="twitter:image" content="${logo}" />`,
+        ].join('\n        ')
+        const withScheme = /<html\b[^>]*\bdata-primary-scheme=/i.test(html)
+          ? html.replace(/(<html\b[^>]*\bdata-primary-scheme=)["'][^"']*["']/i, `$1"${site.primaryScheme}"`)
+          : html.replace(/<html\b([^>]*)>/i, `<html$1 data-primary-scheme="${site.primaryScheme}">`)
+        const withIcon = withScheme.match(/<link\s+rel="icon"[^>]*>/i)
+          ? withScheme.replace(/<link\s+rel="icon"[^>]*>/i, iconTag)
+          : withScheme.replace('</head>', `${iconTag}\n</head>`)
         const withTitle = withIcon.match(/<title>.*?<\/title>/i)
           ? withIcon.replace(/<title>.*?<\/title>/i, title)
           : withIcon.replace('</head>', `${title}\n</head>`)
-        return withTitle.includes('id="brand-theme"')
+        const withTheme = withTitle.includes('id="site-theme"')
           ? withTitle
           : withTitle.replace('</head>', `${themeStyle}\n</head>`)
+        return withTheme.includes('name="description"')
+          ? withTheme
+          : withTheme.replace('</head>', `        ${seoTags}\n</head>`)
       }
     }
   }
@@ -140,11 +140,11 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const backendUrl = env.VITE_DEV_PROXY_TARGET || 'http://localhost:8080'
   const devPort = Number(env.VITE_DEV_PORT || 3000)
-  const brand = resolveViteBrandConfig(env.VITE_BRAND)
+  const site = resolveViteSiteConfig(env)
 
   return {
     plugins: [
-      injectBrandDefaults(brand),
+      injectSiteDefaults(site),
       vue(),
       checker({
         vueTsc: true

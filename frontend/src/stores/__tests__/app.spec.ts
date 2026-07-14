@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useAppStore } from '@/stores/app'
 import { getPublicSettings } from '@/api/auth'
+import { activeBrand } from '@/brand'
 
 // Mock API 模块
 vi.mock('@/api/admin/system', () => ({
@@ -267,8 +268,10 @@ describe('useAppStore', () => {
       const result = store.initFromInjectedConfig()
 
       expect(result).toBe(true)
-      expect(store.siteName).toBe('TestSite')
-      expect(store.siteLogo).toBe('/logo.png')
+      expect(store.siteName).toBe(activeBrand.siteName)
+      expect(store.siteLogo).toBe(activeBrand.logo)
+      expect(store.cachedPublicSettings?.site_name).toBe(activeBrand.siteName)
+      expect(store.cachedPublicSettings?.site_logo).toBe(activeBrand.logo)
       expect(store.siteVersion).toBe('1.0.0')
       expect(store.publicSettingsLoaded).toBe(true)
     })

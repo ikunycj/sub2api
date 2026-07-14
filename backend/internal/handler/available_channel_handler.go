@@ -1,7 +1,10 @@
 package handler
 
 import (
+	"context"
+	"math"
 	"sort"
+	"strings"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	"github.com/Wei-Shaw/sub2api/internal/server/middleware"
@@ -21,9 +24,11 @@ import (
 //  4. 字段白名单：仅返回用户需要的字段（省略 BillingModelSource / RestrictModels
 //     / 内部 ID / Status 等管理字段）。
 type AvailableChannelHandler struct {
-	channelService *service.ChannelService
-	apiKeyService  *service.APIKeyService
-	settingService *service.SettingService
+	channelService  *service.ChannelService
+	apiKeyService   *service.APIKeyService
+	settingService  *service.SettingService
+	groupService    *service.GroupService
+	pricingResolver *service.ModelPricingResolver
 }
 
 // NewAvailableChannelHandler 创建用户侧可用渠道 handler。
@@ -31,11 +36,15 @@ func NewAvailableChannelHandler(
 	channelService *service.ChannelService,
 	apiKeyService *service.APIKeyService,
 	settingService *service.SettingService,
+	groupService *service.GroupService,
+	pricingResolver *service.ModelPricingResolver,
 ) *AvailableChannelHandler {
 	return &AvailableChannelHandler{
-		channelService: channelService,
-		apiKeyService:  apiKeyService,
-		settingService: settingService,
+		channelService:  channelService,
+		apiKeyService:   apiKeyService,
+		settingService:  settingService,
+		groupService:    groupService,
+		pricingResolver: pricingResolver,
 	}
 }
 
@@ -111,6 +120,28 @@ type userAvailableChannel struct {
 	Platforms   []userChannelPlatformSection `json:"platforms"`
 }
 
+// publicModelCatalogResponse 是公开模型广场使用的只读目录。
+type publicModelCatalogResponse struct {
+	Groups []publicModelCatalogGroup `json:"groups"`
+}
+
+// publicModelCatalogGroup 只暴露标准（余额）分组及该分组下可用模型。
+type publicModelCatalogGroup struct {
+	ID             int64                    `json:"id"`
+	Name           string                   `json:"name"`
+	Platform       string                   `json:"platform"`
+	RateMultiplier float64                  `json:"rate_multiplier"`
+	Models         []publicModelCatalogItem `json:"models"`
+}
+
+// publicModelCatalogItem 是公开模型广场的模型条目。
+type publicModelCatalogItem struct {
+	Name            string                     `json:"name"`
+	Platform        string                     `json:"platform"`
+	Pricing         *userSupportedModelPricing `json:"pricing"`
+	OfficialPricing *userSupportedModelPricing `json:"official_pricing"`
+}
+
 // List 列出当前用户可见的「可用渠道」。
 // GET /api/v1/channels/available
 func (h *AvailableChannelHandler) List(c *gin.Context) {
@@ -164,6 +195,163 @@ func (h *AvailableChannelHandler) List(c *gin.Context) {
 	}
 
 	response.Success(c, out)
+}
+
+// ListPublicModelCatalog 列出公开模型广场目录。
+// GET /api/v1/models/catalog
+//
+// 公开页不具备用户上下文，因此仅展示非专属的标准（余额）分组；订阅分组和
+// 专属标准分组都不暴露。模型来自分组的 models_list_config.models；其中
+// enabled 仅控制 /v1/models 是否强制使用自定义列表，不作为模型广场可见性开关。
+func (h *AvailableChannelHandler) ListPublicModelCatalog(c *gin.Context) {
+	if h.groupService == nil {
+		response.InternalError(c, "Group service is not configured")
+		return
+	}
+
+	groups, err := h.groupService.ListActive(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	response.Success(c, publicModelCatalogResponse{
+		Groups: buildPublicModelCatalog(c.Request.Context(), groups, h.pricingResolver),
+	})
+}
+
+func buildPublicModelCatalog(
+	ctx context.Context,
+	groups []service.Group,
+	pricingResolver *service.ModelPricingResolver,
+) []publicModelCatalogGroup {
+	out := make([]publicModelCatalogGroup, 0, len(groups))
+	for i := range groups {
+		group := groups[i]
+		if !isPublicStandardCatalogGroup(group) {
+			continue
+		}
+		models := buildPublicModelCatalogItems(ctx, group, pricingResolver)
+		if len(models) == 0 {
+			continue
+		}
+		out = append(out, publicModelCatalogGroup{
+			ID:             group.ID,
+			Name:           group.Name,
+			Platform:       group.Platform,
+			RateMultiplier: group.RateMultiplier,
+			Models:         models,
+		})
+	}
+	return out
+}
+
+func isPublicStandardCatalogGroup(group service.Group) bool {
+	status := strings.TrimSpace(group.Status)
+	subscriptionType := strings.TrimSpace(group.SubscriptionType)
+	return group.ID > 0 &&
+		strings.TrimSpace(group.Name) != "" &&
+		strings.TrimSpace(group.Platform) != "" &&
+		!group.IsExclusive &&
+		(status == "" || status == service.StatusActive) &&
+		(subscriptionType == "" || subscriptionType == service.SubscriptionTypeStandard)
+}
+
+func buildPublicModelCatalogItems(
+	ctx context.Context,
+	group service.Group,
+	pricingResolver *service.ModelPricingResolver,
+) []publicModelCatalogItem {
+	models := group.ModelsListConfig.Models
+	if len(models) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(models))
+	out := make([]publicModelCatalogItem, 0, len(models))
+	for _, raw := range models {
+		model := strings.TrimSpace(raw)
+		if model == "" {
+			continue
+		}
+		key := strings.ToLower(model)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+
+		var pricing *userSupportedModelPricing
+		var officialPricing *userSupportedModelPricing
+		if pricingResolver != nil {
+			groupID := group.ID
+			pricing = toPublicResolvedPricing(pricingResolver.Resolve(ctx, service.PricingInput{
+				Model:   model,
+				GroupID: &groupID,
+			}))
+			officialPricing = toPublicResolvedPricing(pricingResolver.Resolve(ctx, service.PricingInput{
+				Model: model,
+			}))
+		}
+
+		out = append(out, publicModelCatalogItem{
+			Name:            model,
+			Platform:        group.Platform,
+			Pricing:         pricing,
+			OfficialPricing: officialPricing,
+		})
+	}
+	return out
+}
+
+func toPublicResolvedPricing(resolved *service.ResolvedPricing) *userSupportedModelPricing {
+	if resolved == nil {
+		return nil
+	}
+
+	mode := resolved.Mode
+	if mode == "" {
+		mode = service.BillingModeToken
+	}
+	dto := &userSupportedModelPricing{
+		BillingMode: string(mode),
+	}
+
+	if pricing := resolved.BasePricing; pricing != nil {
+		dto.InputPrice = publicPricePtr(pricing.InputPricePerToken)
+		dto.OutputPrice = publicPricePtr(pricing.OutputPricePerToken)
+		dto.CacheWritePrice = publicPricePtr(pricing.CacheCreationPricePerToken)
+		dto.CacheReadPrice = publicPricePtr(pricing.CacheReadPricePerToken)
+		dto.ImageOutputPrice = publicPricePtr(pricing.ImageOutputPricePerToken)
+	}
+
+	switch mode {
+	case service.BillingModePerRequest, service.BillingModeImage:
+		dto.PerRequestPrice = publicPricePtr(resolved.DefaultPerRequestPrice)
+		dto.Intervals = toUserPricingIntervals(resolved.RequestTiers)
+	default:
+		dto.Intervals = toUserPricingIntervals(resolved.Intervals)
+	}
+
+	if !hasUserPricingValues(dto) {
+		return nil
+	}
+	return dto
+}
+
+func publicPricePtr(value float64) *float64 {
+	if value <= 0 || math.IsNaN(value) || math.IsInf(value, 0) {
+		return nil
+	}
+	return &value
+}
+
+func hasUserPricingValues(pricing *userSupportedModelPricing) bool {
+	return pricing != nil && (pricing.InputPrice != nil ||
+		pricing.OutputPrice != nil ||
+		pricing.CacheWritePrice != nil ||
+		pricing.CacheReadPrice != nil ||
+		pricing.ImageOutputPrice != nil ||
+		pricing.PerRequestPrice != nil ||
+		len(pricing.Intervals) > 0)
 }
 
 // buildPlatformSections 把一个渠道按 visibleGroups 的平台集合拆成有序的 section 列表：
@@ -253,19 +441,7 @@ func toUserPricing(p *service.ChannelModelPricing) *userSupportedModelPricing {
 	if p == nil {
 		return nil
 	}
-	intervals := make([]userPricingIntervalDTO, 0, len(p.Intervals))
-	for _, iv := range p.Intervals {
-		intervals = append(intervals, userPricingIntervalDTO{
-			MinTokens:       iv.MinTokens,
-			MaxTokens:       iv.MaxTokens,
-			TierLabel:       iv.TierLabel,
-			InputPrice:      iv.InputPrice,
-			OutputPrice:     iv.OutputPrice,
-			CacheWritePrice: iv.CacheWritePrice,
-			CacheReadPrice:  iv.CacheReadPrice,
-			PerRequestPrice: iv.PerRequestPrice,
-		})
-	}
+	intervals := toUserPricingIntervals(p.Intervals)
 	billingMode := string(p.BillingMode)
 	if billingMode == "" {
 		billingMode = string(service.BillingModeToken)
@@ -280,4 +456,21 @@ func toUserPricing(p *service.ChannelModelPricing) *userSupportedModelPricing {
 		PerRequestPrice:  p.PerRequestPrice,
 		Intervals:        intervals,
 	}
+}
+
+func toUserPricingIntervals(src []service.PricingInterval) []userPricingIntervalDTO {
+	out := make([]userPricingIntervalDTO, 0, len(src))
+	for _, iv := range src {
+		out = append(out, userPricingIntervalDTO{
+			MinTokens:       iv.MinTokens,
+			MaxTokens:       iv.MaxTokens,
+			TierLabel:       iv.TierLabel,
+			InputPrice:      iv.InputPrice,
+			OutputPrice:     iv.OutputPrice,
+			CacheWritePrice: iv.CacheWritePrice,
+			CacheReadPrice:  iv.CacheReadPrice,
+			PerRequestPrice: iv.PerRequestPrice,
+		})
+	}
+	return out
 }

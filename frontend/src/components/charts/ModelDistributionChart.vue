@@ -248,6 +248,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import UserBreakdownSubTable from './UserBreakdownSubTable.vue'
 import type { ModelStat, UserSpendingRankingItem, UserBreakdownItem } from '@/types'
 import { getUserBreakdown } from '@/api/admin/dashboard'
+import { activeBrand, getBrandChartPalette } from '@/brand'
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 
@@ -330,20 +331,7 @@ const emit = defineEmits<{
 const enableRankingView = computed(() => props.enableRankingView)
 const activeView = ref<'model_distribution' | 'spending_ranking'>('model_distribution')
 
-const chartColors = [
-  '#f97316',
-  '#2563eb',
-  '#059669',
-  '#dc2626',
-  '#0891b2',
-  '#ca8a04',
-  '#65a30d',
-  '#0d9488',
-  '#0284c7',
-  '#ea580c',
-  '#16a34a',
-  '#475569'
-]
+const chartColors = getBrandChartPalette(activeBrand)
 
 const displayModelStats = computed(() => {
   const sourceStats = props.source === 'upstream'
@@ -495,14 +483,15 @@ const getRankingRowLabel = (item: RankingDisplayItem): string => {
   return getRankingUserLabel(item)
 }
 
-const formatCost = (value: number): string => {
-  if (value >= 1000) {
-    return (value / 1000).toFixed(2) + 'K'
-  } else if (value >= 1) {
-    return value.toFixed(2)
-  } else if (value >= 0.01) {
-    return value.toFixed(3)
+const formatCost = (value: number | null | undefined): string => {
+  const amount = Number.isFinite(value) ? Number(value) : 0
+  if (amount >= 1000) {
+    return (amount / 1000).toFixed(2) + 'K'
+  } else if (amount >= 1) {
+    return amount.toFixed(2)
+  } else if (amount >= 0.01) {
+    return amount.toFixed(3)
   }
-  return value.toFixed(4)
+  return amount.toFixed(4)
 }
 </script>

@@ -2,7 +2,9 @@
 
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL: string
-  readonly VITE_BRAND?: string
+  readonly VITE_SITE_NAME?: string
+  readonly VITE_PRIMARY_SCHEME?: string
+  readonly VITE_SITE_LOGO?: string
   readonly BASE_URL: string
 }
 

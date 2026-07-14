@@ -1,18 +1,29 @@
-import { resolveBrandConfig } from './configs'
 import { applyBrandTheme } from './theme'
+import { activeBrand } from './runtime'
 
-export { brandConfigs, DEFAULT_BRAND, resolveBrandConfig } from './configs'
-export { replaceBrandTokens, withBrandTokens } from './text'
+export { DEFAULT_BRAND_ENV, PRIMARY_COLOR_SCHEMES, resolveBrandConfig, sharedBrandContent } from './configs'
+export { activeBrand } from './runtime'
+export {
+  getBrandSlug,
+  getCurrentApiBaseUrl,
+  getCurrentHost,
+  getCurrentOrigin,
+  replaceBrandTokens,
+  withBrandTokens,
+} from './text'
+export { withBrandIdentity } from './settings'
 export { applyBrandTheme, getBrandCssText, getBrandCssVariables } from './theme'
+export { getBrandChartPalette, hexToRgba } from './chart'
 export type {
+  BrandEnvironmentConfig,
+  BrandPrimaryScheme,
   BrandColorScale,
   BrandColorStep,
   BrandConfig,
-  BrandKey,
   HomeCopy,
   LocaleKey,
   PublicLayoutCopy,
+  SharedBrandContent,
 } from './types'
 
-export const activeBrand = resolveBrandConfig(import.meta.env.VITE_BRAND)
 export const applyActiveBrandTheme = () => applyBrandTheme(activeBrand)

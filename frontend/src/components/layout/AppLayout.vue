@@ -1,11 +1,11 @@
 <template>
-  <div class="ikun-console-shell min-h-screen bg-[#fff8ed] dark:bg-dark-950">
+  <div class="brand-console-shell min-h-screen bg-primary-50 dark:bg-dark-950">
     <!-- Background Decoration -->
     <div class="pointer-events-none fixed inset-0 overflow-hidden">
       <div class="absolute inset-0 bg-mesh-gradient"></div>
-      <div class="ikun-console-grid absolute inset-0"></div>
-      <div class="ikun-console-arc ikun-console-arc-main"></div>
-      <div class="ikun-console-arc ikun-console-arc-small"></div>
+      <div class="brand-console-grid absolute inset-0"></div>
+      <div class="brand-console-arc brand-console-arc-main"></div>
+      <div class="brand-console-arc brand-console-arc-small"></div>
     </div>
 
     <!-- Sidebar -->
@@ -57,43 +57,43 @@ defineExpose({ replayTour })
 </script>
 
 <style scoped>
-.ikun-console-shell {
+.brand-console-shell {
   background:
-    radial-gradient(circle at 12% 0%, rgba(245, 158, 11, 0.16), transparent 30rem),
-    radial-gradient(circle at 92% 8%, rgba(249, 115, 22, 0.12), transparent 30rem),
-    linear-gradient(135deg, #fff8ed 0%, #fff7ed 52%, #f8fafc 100%);
+    radial-gradient(circle at 12% 0%, rgb(var(--color-primary-400) / 0.16), transparent 30rem),
+    radial-gradient(circle at 92% 8%, rgb(6 182 212 / 0.1), transparent 30rem),
+    linear-gradient(135deg, rgb(var(--color-primary-50)) 0%, #ffffff 52%, #f8fafc 100%);
 }
 
-:global(.dark) .ikun-console-shell {
+:global(.dark) .brand-console-shell {
   background:
-    radial-gradient(circle at 12% 0%, rgba(249, 115, 22, 0.1), transparent 30rem),
-    radial-gradient(circle at 92% 8%, rgba(13, 148, 136, 0.08), transparent 28rem),
+    radial-gradient(circle at 12% 0%, rgb(var(--color-primary-500) / 0.1), transparent 30rem),
+    radial-gradient(circle at 92% 8%, rgb(13 148 136 / 0.08), transparent 28rem),
     linear-gradient(135deg, #020617 0%, #0f172a 58%, #111827 100%);
 }
 
-.ikun-console-grid {
+.brand-console-grid {
   background-image:
-    linear-gradient(rgba(120, 53, 15, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(120, 53, 15, 0.055) 1px, transparent 1px);
+    linear-gradient(rgb(var(--color-primary-800) / 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--color-primary-800) / 0.055) 1px, transparent 1px);
   background-size: 72px 72px;
   mask-image: linear-gradient(to bottom, black 0%, transparent 76%);
 }
 
-:global(.dark) .ikun-console-grid {
+:global(.dark) .brand-console-grid {
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
 }
 
-.ikun-console-arc {
+.brand-console-arc {
   position: absolute;
-  border: 1px solid rgba(245, 139, 21, 0.28);
+  border: 1px solid rgb(var(--color-primary-400) / 0.28);
   border-bottom-color: transparent;
   border-left-color: transparent;
   border-radius: 9999px;
 }
 
-.ikun-console-arc-main {
+.brand-console-arc-main {
   right: -12rem;
   top: 5rem;
   width: 34rem;
@@ -101,7 +101,7 @@ defineExpose({ replayTour })
   transform: rotate(138deg);
 }
 
-.ikun-console-arc-small {
+.brand-console-arc-small {
   left: 10rem;
   bottom: -12rem;
   width: 28rem;
@@ -109,8 +109,8 @@ defineExpose({ replayTour })
   transform: rotate(28deg);
 }
 
-:global(.dark) .ikun-console-arc {
-  border-color: rgba(249, 115, 22, 0.18);
+:global(.dark) .brand-console-arc {
+  border-color: rgb(var(--color-primary-500) / 0.18);
   border-bottom-color: transparent;
   border-left-color: transparent;
 }

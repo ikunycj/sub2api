@@ -3,11 +3,13 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -154,4 +156,130 @@ func TestBuildPlatformSections_GroupsByPlatform(t *testing.T) {
 	require.Equal(t, int64(2), sections[0].Groups[0].ID)
 	require.Len(t, sections[0].SupportedModels, 1)
 	require.Equal(t, "claude-sonnet-4-6", sections[0].SupportedModels[0].Name)
+}
+
+func TestBuildPublicModelCatalog_StandardPublicGroupsOnly(t *testing.T) {
+	groups := []service.Group{
+		{
+			ID:                    1,
+			Name:                  "standard-public",
+			Platform:              "openai",
+			Status:                service.StatusActive,
+			SubscriptionType:      service.SubscriptionTypeStandard,
+			ModelsListConfig:      service.GroupModelsListConfig{Enabled: true, Models: []string{" gpt-4o ", "gpt-4o", ""}},
+			RateMultiplier:        1.2,
+			AllowMessagesDispatch: true,
+		},
+		{
+			ID:               2,
+			Name:             "subscription",
+			Platform:         "openai",
+			Status:           service.StatusActive,
+			SubscriptionType: service.SubscriptionTypeSubscription,
+			ModelsListConfig: service.GroupModelsListConfig{Enabled: true, Models: []string{"gpt-4.1"}},
+		},
+		{
+			ID:               3,
+			Name:             "exclusive",
+			Platform:         "openai",
+			Status:           service.StatusActive,
+			SubscriptionType: service.SubscriptionTypeStandard,
+			IsExclusive:      true,
+			ModelsListConfig: service.GroupModelsListConfig{Enabled: true, Models: []string{"gpt-4.1"}},
+		},
+		{
+			ID:               4,
+			Name:             "anthropic",
+			Platform:         "anthropic",
+			Status:           service.StatusActive,
+			SubscriptionType: service.SubscriptionTypeStandard,
+			ModelsListConfig: service.GroupModelsListConfig{Enabled: true, Models: []string{"claude-sonnet-4-6"}},
+		},
+		{
+			ID:               5,
+			Name:             "disabled-group",
+			Platform:         "openai",
+			Status:           service.StatusDisabled,
+			SubscriptionType: service.SubscriptionTypeStandard,
+			ModelsListConfig: service.GroupModelsListConfig{Enabled: true, Models: []string{"disabled-model"}},
+		},
+		{
+			ID:               6,
+			Name:             "custom-list-disabled",
+			Platform:         "openai",
+			Status:           service.StatusActive,
+			SubscriptionType: service.SubscriptionTypeStandard,
+			ModelsListConfig: service.GroupModelsListConfig{Enabled: false, Models: []string{"configured-model"}},
+		},
+	}
+
+	catalog := buildPublicModelCatalog(context.Background(), groups, nil)
+	require.Len(t, catalog, 3)
+	require.Equal(t, "standard-public", catalog[0].Name)
+	require.Equal(t, "anthropic", catalog[1].Name)
+	require.Equal(t, "custom-list-disabled", catalog[2].Name)
+	require.Equal(t, float64(1.2), catalog[0].RateMultiplier)
+	require.Equal(t, []publicModelCatalogItem{{Name: "gpt-4o", Platform: "openai"}}, catalog[0].Models)
+	require.Equal(t, []publicModelCatalogItem{{Name: "claude-sonnet-4-6", Platform: "anthropic"}}, catalog[1].Models)
+	require.Equal(t, []publicModelCatalogItem{{Name: "configured-model", Platform: "openai"}}, catalog[2].Models)
+}
+
+func TestToPublicResolvedPricing_TokenPricing(t *testing.T) {
+	intervalInput := 1.5e-6
+	pricing := toPublicResolvedPricing(&service.ResolvedPricing{
+		Mode: service.BillingModeToken,
+		BasePricing: &service.ModelPricing{
+			InputPricePerToken:         2e-6,
+			OutputPricePerToken:        8e-6,
+			CacheCreationPricePerToken: 2.5e-6,
+			CacheReadPricePerToken:     2e-7,
+		},
+		Intervals: []service.PricingInterval{
+			{MinTokens: 1000, InputPrice: &intervalInput},
+		},
+	})
+
+	require.NotNil(t, pricing)
+	require.Equal(t, string(service.BillingModeToken), pricing.BillingMode)
+	require.InDelta(t, 2e-6, *pricing.InputPrice, 1e-12)
+	require.InDelta(t, 8e-6, *pricing.OutputPrice, 1e-12)
+	require.InDelta(t, 2.5e-6, *pricing.CacheWritePrice, 1e-12)
+	require.InDelta(t, 2e-7, *pricing.CacheReadPrice, 1e-12)
+	require.Len(t, pricing.Intervals, 1)
+	require.InDelta(t, intervalInput, *pricing.Intervals[0].InputPrice, 1e-12)
+}
+
+func TestToPublicResolvedPricing_RejectsEmptyPricing(t *testing.T) {
+	require.Nil(t, toPublicResolvedPricing(&service.ResolvedPricing{
+		Mode:        service.BillingModeToken,
+		BasePricing: &service.ModelPricing{},
+	}))
+}
+
+func TestBuildPublicModelCatalog_IncludesEffectiveAndOfficialPricing(t *testing.T) {
+	billingService := service.NewBillingService(&config.Config{}, nil)
+	pricingResolver := service.NewModelPricingResolver(nil, billingService)
+	catalog := buildPublicModelCatalog(context.Background(), []service.Group{
+		{
+			ID:               7,
+			Name:             "standard",
+			Platform:         service.PlatformAnthropic,
+			Status:           service.StatusActive,
+			SubscriptionType: service.SubscriptionTypeStandard,
+			RateMultiplier:   0.02,
+			ModelsListConfig: service.GroupModelsListConfig{
+				Enabled: true,
+				Models:  []string{"claude-sonnet-4"},
+			},
+		},
+	}, pricingResolver)
+
+	require.Len(t, catalog, 1)
+	require.Len(t, catalog[0].Models, 1)
+	model := catalog[0].Models[0]
+	require.NotNil(t, model.Pricing)
+	require.NotNil(t, model.OfficialPricing)
+	require.InDelta(t, 3e-6, *model.Pricing.InputPrice, 1e-12)
+	require.InDelta(t, 3e-6, *model.OfficialPricing.InputPrice, 1e-12)
+	require.Equal(t, float64(0.02), catalog[0].RateMultiplier)
 }

@@ -4,6 +4,7 @@
  */
 
 import { apiClient } from './client'
+import { activeBrand, withBrandIdentity } from '@/brand'
 import type {
   LoginRequest,
   RegisterRequest,
@@ -333,7 +334,7 @@ export function isAuthenticated(): boolean {
  */
 export async function getPublicSettings(): Promise<PublicSettings> {
   const { data } = await apiClient.get<PublicSettings>('/settings/public')
-  return data
+  return withBrandIdentity(data, activeBrand)
 }
 
 export type WeChatOAuthMode = 'open' | 'mp'

@@ -31,9 +31,7 @@ async function bootstrap() {
   appStore.initFromInjectedConfig()
 
   // Set document title immediately after config is loaded
-  if (appStore.siteName) {
-    document.title = `${appStore.siteName} - ${activeBrand.titleSuffix}`
-  }
+  document.title = appStore.siteName || activeBrand.siteName
 
   await initI18n()
 

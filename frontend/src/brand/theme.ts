@@ -50,5 +50,5 @@ export function applyBrandTheme(brand: BrandConfig, root: HTMLElement = document
   Object.entries(variables).forEach(([name, value]) => {
     root.style.setProperty(name, value)
   })
-  root.dataset.brand = brand.key
+  root.dataset.primaryScheme = brand.primaryScheme
 }

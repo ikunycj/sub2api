@@ -20,7 +20,7 @@ const adminSettingsStore = useAdminSettingsStore()
 
 function updateDocumentTitle() {
   // Public brand pages own their localized document titles in CloseAiPublicLayout.
-  if (['/home', '/models', '/docs'].includes(route.path)) {
+  if (['/', '/home', '/models', '/docs'].includes(route.path)) {
     return
   }
 

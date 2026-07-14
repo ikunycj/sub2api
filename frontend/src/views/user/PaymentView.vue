@@ -6,7 +6,7 @@
       </div>
       <template v-else>
         <!-- Tab Switcher (hide during payment and subscription confirm) -->
-        <div v-if="tabs.length > 1 && paymentPhase === 'select' && !selectedPlan" class="flex space-x-1 rounded-2xl border border-amber-100/80 bg-white/75 p-1.5 shadow-sm shadow-primary-500/5 backdrop-blur dark:border-primary-900/30 dark:bg-dark-900/75">
+        <div v-if="tabs.length > 1 && paymentPhase === 'select' && !selectedPlan" class="flex space-x-1 rounded-2xl border border-gray-200/80 bg-white/75 p-1.5 shadow-sm shadow-primary-500/5 backdrop-blur dark:border-primary-900/30 dark:bg-dark-900/75">
           <button v-for="tab in tabs" :key="tab.key"
             class="flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all"
             :class="activeTab === tab.key ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-md shadow-primary-500/25' : 'text-primary-900/65 hover:bg-primary-50/80 hover:text-primary-700 dark:text-gray-400 dark:hover:bg-primary-950/30 dark:hover:text-primary-200'"
@@ -69,15 +69,15 @@
                   <span class="text-gray-500 dark:text-gray-400">{{ t('payment.fee') }} ({{ feeRate }}%)</span>
                   <span class="text-gray-900 dark:text-white">{{ formatSelectedPaymentAmount(feeAmount) }}</span>
                 </div>
-                <div v-if="feeRate > 0" class="flex justify-between border-t border-amber-100 pt-2 dark:border-primary-900/30">
+                <div v-if="feeRate > 0" class="flex justify-between border-t border-gray-200 pt-2 dark:border-primary-900/30">
                   <span class="font-medium text-gray-700 dark:text-gray-300">{{ t('payment.actualPay') }}</span>
                   <span class="text-lg font-bold text-primary-600 dark:text-primary-400">{{ formatSelectedPaymentAmount(totalAmount) }}</span>
                 </div>
-                <div v-if="balanceRechargeMultiplier !== 1" class="flex justify-between" :class="{ 'border-t border-amber-100 pt-2 dark:border-primary-900/30': feeRate <= 0 }">
+                <div v-if="balanceRechargeMultiplier !== 1" class="flex justify-between" :class="{ 'border-t border-gray-200 pt-2 dark:border-primary-900/30': feeRate <= 0 }">
                   <span class="text-gray-500 dark:text-gray-400">{{ t('payment.creditedBalance') }}</span>
                   <span class="text-gray-900 dark:text-white">${{ creditedAmount.toFixed(2) }}</span>
                 </div>
-                <p v-if="balanceRechargeMultiplier !== 1" class="border-t border-amber-100 pt-2 text-xs text-gray-500 dark:border-primary-900/30 dark:text-gray-400">
+                <p v-if="balanceRechargeMultiplier !== 1" class="border-t border-gray-200 pt-2 text-xs text-gray-500 dark:border-primary-900/30 dark:text-gray-400">
                   {{ t('payment.rechargeRatePreview', { usd: balanceRechargeMultiplier.toFixed(2) }) }}
                 </p>
               </div>
@@ -174,7 +174,7 @@
                     <span class="text-gray-500 dark:text-gray-400">{{ t('payment.fee') }} ({{ feeRate }}%)</span>
                     <span class="text-gray-900 dark:text-white">{{ formatSelectedPaymentAmount(subFeeAmount) }}</span>
                   </div>
-                  <div class="flex justify-between border-t border-amber-100 pt-2 dark:border-primary-900/30">
+                  <div class="flex justify-between border-t border-gray-200 pt-2 dark:border-primary-900/30">
                     <span class="font-medium text-gray-700 dark:text-gray-300">{{ t('payment.actualPay') }}</span>
                     <span class="text-lg font-bold text-primary-600 dark:text-primary-400">{{ formatSelectedPaymentAmount(subTotalAmount) }}</span>
                   </div>
@@ -211,7 +211,7 @@
                 <p class="mb-2 text-xs font-medium text-gray-400 dark:text-gray-500">{{ t('payment.activeSubscription') }}</p>
                 <div class="space-y-2">
                   <div v-for="sub in activeSubscriptions" :key="sub.id"
-                    class="flex items-center gap-3 rounded-xl border border-amber-100/80 bg-white/85 px-3 py-2 shadow-sm shadow-primary-500/5 backdrop-blur dark:border-primary-900/25 dark:bg-dark-900/70">
+                    class="flex items-center gap-3 rounded-xl border border-gray-200/80 bg-white/85 px-3 py-2 shadow-sm shadow-primary-500/5 backdrop-blur dark:border-primary-900/25 dark:bg-dark-900/70">
                     <div :class="['h-6 w-1 shrink-0 rounded-full', platformAccentBarClass(sub.group?.platform || '')]" />
                     <div class="min-w-0 flex-1">
                       <div class="flex items-center gap-1.5">
@@ -246,7 +246,7 @@
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showRenewalModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" @click.self="closeRenewalModal">
-          <div class="relative w-full max-w-lg rounded-3xl border border-amber-100/80 bg-white/95 p-6 shadow-2xl shadow-primary-950/10 backdrop-blur dark:border-primary-900/30 dark:bg-dark-900/95">
+          <div class="relative w-full max-w-lg rounded-3xl border border-gray-200/80 bg-white/95 p-6 shadow-2xl shadow-primary-950/10 backdrop-blur dark:border-primary-900/30 dark:bg-dark-900/95">
             <!-- Close button -->
             <button class="absolute right-4 top-4 rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-700 dark:hover:text-gray-200" @click="closeRenewalModal">
               <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>

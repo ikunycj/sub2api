@@ -13,8 +13,8 @@
           :class="[
             'rounded-xl border px-4 py-3 text-center font-semibold transition-all',
             modelValue === amt
-              ? 'border-primary-400 bg-gradient-to-br from-primary-50 to-amber-50 text-primary-700 shadow-sm shadow-primary-500/15 dark:border-primary-500/70 dark:from-primary-900/35 dark:to-primary-950/20 dark:text-primary-200'
-              : 'border-amber-100/80 bg-white/85 text-gray-700 hover:border-primary-200 hover:bg-primary-50/60 hover:text-primary-700 dark:border-primary-900/25 dark:bg-dark-900/65 dark:text-gray-200 dark:hover:border-primary-800/60 dark:hover:bg-primary-950/25',
+              ? 'border-primary-400 bg-gradient-to-br from-primary-50 to-primary-100 text-primary-700 shadow-sm shadow-primary-500/15 dark:border-primary-500/70 dark:from-primary-900/35 dark:to-primary-950/20 dark:text-primary-200'
+              : 'border-primary-100/80 bg-white/85 text-gray-700 hover:border-primary-200 hover:bg-primary-50/60 hover:text-primary-700 dark:border-primary-900/25 dark:bg-dark-900/65 dark:text-gray-200 dark:hover:border-primary-800/60 dark:hover:bg-primary-950/25',
           ]"
           @click="selectAmount(amt)"
         >

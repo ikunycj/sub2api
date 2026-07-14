@@ -9,7 +9,7 @@
       ]"
     >
     <!-- Colored top accent bar -->
-      <div class="h-1.5 bg-gradient-to-r from-primary-400 via-primary-500 to-amber-500" />
+      <div class="h-1.5 bg-gradient-to-r from-primary-400 via-primary-500 to-primary-700" />
 
       <div class="flex flex-1 flex-col p-4">
       <!-- Header: name + badge + price -->
@@ -39,7 +39,7 @@
       </div>
 
       <!-- Group quota info (compact) -->
-      <div v-if="showInfoPanel" class="mb-3 grid grid-cols-2 gap-x-3 gap-y-1 rounded-xl border border-amber-100/70 bg-gradient-to-br from-primary-50/70 to-white px-3 py-2 text-xs dark:border-primary-900/25 dark:from-primary-950/20 dark:to-dark-900/70">
+      <div v-if="showInfoPanel" class="mb-3 grid grid-cols-2 gap-x-3 gap-y-1 rounded-xl border border-primary-100/70 bg-gradient-to-br from-primary-50/70 to-white px-3 py-2 text-xs dark:border-primary-900/25 dark:from-primary-950/20 dark:to-dark-900/70">
         <template v-if="showSubscriptionDetails">
         <div class="flex items-center justify-between">
           <span class="text-gray-400 dark:text-dark-500">{{ t('payment.planCard.rate') }}</span>
@@ -103,7 +103,7 @@
           class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm"
           @click.self="closeExternalDialog"
         >
-          <div class="relative w-full max-w-lg overflow-hidden rounded-[28px] border border-amber-100/80 bg-white shadow-2xl shadow-primary-950/15 dark:border-primary-900/30 dark:bg-dark-900">
+          <div class="relative w-full max-w-lg overflow-hidden rounded-[28px] border border-gray-200/80 bg-white shadow-2xl shadow-primary-950/15 dark:border-primary-900/30 dark:bg-dark-900">
             <div class="relative overflow-hidden bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700 px-6 pb-5 pt-6 text-white">
               <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.28),transparent_36%)]"></div>
               <button
@@ -125,9 +125,9 @@
             </div>
 
             <div class="space-y-5 px-6 py-6">
-              <div class="rounded-2xl border border-amber-100/80 bg-gradient-to-br from-amber-50 to-white p-4 shadow-sm dark:border-primary-900/30 dark:from-dark-800 dark:to-dark-900">
+              <div class="rounded-2xl border border-primary-100/80 bg-gradient-to-br from-primary-50 to-white p-4 shadow-sm dark:border-primary-900/30 dark:from-dark-800 dark:to-dark-900">
                 <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary-700 dark:text-primary-300">
-                  <span class="inline-flex h-2.5 w-2.5 rounded-full bg-primary-500 shadow-[0_0_12px_rgba(245,158,11,0.45)]"></span>
+                  <span class="inline-flex h-2.5 w-2.5 rounded-full bg-primary-500 shadow-glow"></span>
                   {{ t('payment.externalSubscribe') }}
                 </div>
                 <p class="mt-3 whitespace-pre-wrap text-sm leading-7 text-gray-700 dark:text-gray-200">

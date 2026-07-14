@@ -10,7 +10,7 @@
             <Icon name="check" size="lg" class="text-primary-600 dark:text-primary-300" />
           </div>
           <p class="text-lg font-bold text-gray-900 dark:text-white">{{ props.orderType === 'subscription' ? t('payment.result.subscriptionSuccess') : t('payment.result.success') }}</p>
-          <div v-if="paidOrder" class="w-full rounded-xl border border-amber-100/70 bg-primary-50/60 p-4 dark:border-primary-900/25 dark:bg-primary-950/20">
+          <div v-if="paidOrder" class="w-full rounded-xl border border-primary-100/70 bg-primary-50/60 p-4 dark:border-primary-900/25 dark:bg-primary-950/20">
             <div class="space-y-2 text-sm">
               <div class="flex justify-between">
                 <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.orderId') }}</span>
@@ -39,7 +39,7 @@
     <template v-else-if="outcome === 'cancelled'">
       <div class="card p-6">
         <div class="flex flex-col items-center space-y-4 py-4">
-          <div class="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100/80 dark:bg-primary-900/20">
+          <div class="flex h-16 w-16 items-center justify-center rounded-full bg-primary-100/80 dark:bg-primary-900/20">
             <svg class="h-8 w-8 text-primary-500/70 dark:text-primary-300/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -187,7 +187,7 @@ const isWxpay = computed(() => props.paymentType.includes('wxpay'))
 const qrBorderClass = computed(() => {
   if (isAlipay.value) return 'border-primary-200 bg-gradient-to-br from-primary-50 to-white dark:border-primary-800/45 dark:from-primary-950/25 dark:to-dark-900'
   if (isWxpay.value) return 'border-primary-200 bg-gradient-to-br from-primary-50 to-white dark:border-primary-800/45 dark:from-primary-950/25 dark:to-dark-900'
-  return 'border-amber-100 bg-white dark:border-primary-900/30 dark:bg-dark-900'
+  return 'border-primary-100 bg-white dark:border-primary-900/30 dark:bg-dark-900'
 })
 
 const qrLogoBgClass = computed(() => {

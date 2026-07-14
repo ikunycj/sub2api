@@ -12,10 +12,10 @@
         :class="[
           'relative flex h-[64px] flex-col items-center justify-center rounded-xl border px-3 transition-all sm:flex-1',
           !method.available
-            ? 'cursor-not-allowed border-amber-100/60 bg-primary-50/40 opacity-50 dark:border-dark-700 dark:bg-dark-800/50'
+            ? 'cursor-not-allowed border-primary-100/60 bg-primary-50/40 opacity-50 dark:border-dark-700 dark:bg-dark-800/50'
             : selected === method.type
               ? methodSelectedClass(method.type)
-              : 'border-amber-100/80 bg-white/85 text-gray-700 shadow-sm shadow-primary-500/5 hover:border-primary-200 hover:bg-primary-50/60 hover:text-primary-800 dark:border-primary-900/25 dark:bg-dark-900/65 dark:text-gray-200 dark:hover:border-primary-800/60 dark:hover:bg-primary-950/25',
+              : 'border-primary-100/80 bg-white/85 text-gray-700 shadow-sm shadow-primary-500/5 hover:border-primary-200 hover:bg-primary-50/60 hover:text-primary-800 dark:border-primary-900/25 dark:bg-dark-900/65 dark:text-gray-200 dark:hover:border-primary-800/60 dark:hover:bg-primary-950/25',
         ]"
         @click="method.available && emit('select', method.type)"
       >
@@ -96,7 +96,7 @@ function methodSelectedClass(type: string): string {
           ? 'after:bg-[#FF6B3D]'
           : 'after:bg-primary-500'
   return [
-    'border-primary-400 bg-gradient-to-br from-primary-50 to-amber-50 text-gray-900 shadow-md shadow-primary-500/15',
+    'border-primary-400 bg-gradient-to-br from-primary-50 to-primary-100 text-gray-900 shadow-md shadow-primary-500/15',
     'dark:border-primary-500/60 dark:from-primary-900/35 dark:to-primary-950/20 dark:text-gray-100',
     'after:absolute after:left-3 after:top-3 after:h-1.5 after:w-1.5 after:rounded-full',
     brandRing,

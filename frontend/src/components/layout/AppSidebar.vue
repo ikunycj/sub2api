@@ -15,7 +15,7 @@
       @click="handleMenuItemClick('/home')"
     >
       <!-- Custom Logo or Default Logo -->
-      <div class="sidebar-logo flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-amber-100 to-primary-100 ring-1 ring-primary-200/70 shadow-glow dark:from-dark-900 dark:to-primary-950/50 dark:ring-primary-800/50">
+      <div class="sidebar-logo flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-primary-50 to-primary-100 ring-1 ring-primary-200/70 shadow-glow dark:from-dark-900 dark:to-primary-950/50 dark:ring-primary-800/50">
         <img v-if="settingsLoaded" :src="siteLogo" :alt="siteName" class="h-full w-full object-contain" />
       </div>
       <div class="sidebar-brand" :class="{ 'sidebar-brand-collapsed': sidebarCollapsed }" :aria-hidden="sidebarCollapsed ? 'true' : 'false'">
@@ -144,7 +144,7 @@
     </nav>
 
     <!-- Bottom Section -->
-    <div class="mt-auto border-t border-amber-100/80 p-3 dark:border-primary-900/30">
+    <div class="mt-auto border-t border-primary-100/80 p-3 dark:border-primary-900/30">
       <!-- Theme Toggle -->
       <button
         @click="toggleTheme"

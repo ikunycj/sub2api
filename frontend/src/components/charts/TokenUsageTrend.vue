@@ -35,6 +35,7 @@ import {
 import { Line } from 'vue-chartjs'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import type { TrendDataPoint } from '@/types'
+import { activeBrand } from '@/brand'
 
 ChartJS.register(
   CategoryScale,
@@ -61,7 +62,7 @@ const isDarkMode = computed(() => {
 const chartColors = computed(() => ({
   text: isDarkMode.value ? '#e5e7eb' : '#374151',
   grid: isDarkMode.value ? '#374151' : '#e5e7eb',
-  input: '#f97316',
+  input: activeBrand.theme.primary['500'],
   output: '#2563eb',
   cacheCreation: '#059669',
   cacheRead: '#0891b2',

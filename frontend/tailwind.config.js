@@ -19,7 +19,7 @@ export default {
           900: 'rgb(var(--color-primary-900) / <alpha-value>)',
           950: 'rgb(var(--color-primary-950) / <alpha-value>)'
         },
-        // 功能辅助色 - 低饱和青绿，用于图表和非品牌强调
+        // 固定功能辅助色；它不属于站点品牌配置。
         secondary: {
           50: '#ecfeff',
           100: '#cffafe',

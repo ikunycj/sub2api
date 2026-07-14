@@ -140,6 +140,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import UserBreakdownSubTable from './UserBreakdownSubTable.vue'
 import type { EndpointStat, UserBreakdownItem } from '@/types'
 import { getUserBreakdown } from '@/api/admin/dashboard'
+import { activeBrand, getBrandChartPalette } from '@/brand'
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 
@@ -208,20 +209,7 @@ const toggleBreakdown = async (endpoint: string) => {
   }
 }
 
-const chartColors = [
-  '#f97316',
-  '#2563eb',
-  '#059669',
-  '#dc2626',
-  '#0891b2',
-  '#ca8a04',
-  '#65a30d',
-  '#0d9488',
-  '#0284c7',
-  '#ea580c',
-  '#16a34a',
-  '#475569'
-]
+const chartColors = getBrandChartPalette(activeBrand)
 
 const displayEndpointStats = computed(() => {
   const sourceStats = props.source === 'upstream'

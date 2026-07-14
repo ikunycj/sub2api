@@ -314,6 +314,7 @@ import DateRangePicker from '@/components/common/DateRangePicker.vue'
 import Select from '@/components/common/Select.vue'
 import ModelDistributionChart from '@/components/charts/ModelDistributionChart.vue'
 import TokenUsageTrend from '@/components/charts/TokenUsageTrend.vue'
+import { activeBrand, getBrandChartPalette } from '@/brand'
 
 import {
   Chart as ChartJS,
@@ -490,20 +491,7 @@ const userTrendChartData = computed(() => {
   })
 
   const sortedDates = Array.from(allDates).sort()
-  const colors = [
-    '#f97316',
-    '#2563eb',
-    '#059669',
-    '#dc2626',
-    '#0891b2',
-    '#ca8a04',
-    '#65a30d',
-    '#0d9488',
-    '#0284c7',
-    '#ea580c',
-    '#16a34a',
-    '#475569'
-  ]
+  const colors = getBrandChartPalette(activeBrand)
 
   const datasets = Array.from(userGroups.values()).map((group, idx) => ({
     label: group.name,
@@ -701,10 +689,10 @@ onMounted(() => {
 .dashboard-stat-card {
   position: relative;
   overflow: hidden;
-  border-color: rgba(251, 191, 36, 0.32);
+  border-color: rgb(var(--color-primary-200) / 0.5);
   box-shadow:
-    0 1px 3px rgba(120, 53, 15, 0.05),
-    0 12px 30px rgba(120, 53, 15, 0.06);
+    0 1px 3px rgb(var(--color-primary-950) / 0.05),
+    0 12px 30px rgb(var(--color-primary-950) / 0.06);
 }
 
 .dashboard-stat-card::before {
@@ -712,18 +700,18 @@ onMounted(() => {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(135deg, rgba(255, 247, 237, 0.72), transparent 46%);
+  background: linear-gradient(135deg, rgb(var(--color-primary-50) / 0.72), transparent 46%);
 }
 
 :global(.dark) .dashboard-stat-card {
-  border-color: rgba(249, 115, 22, 0.16);
+  border-color: rgb(var(--color-primary-500) / 0.16);
   box-shadow:
     0 1px 3px rgba(0, 0, 0, 0.18),
     0 12px 30px rgba(0, 0, 0, 0.18);
 }
 
 :global(.dark) .dashboard-stat-card::before {
-  background: linear-gradient(135deg, rgba(124, 45, 18, 0.16), transparent 46%);
+  background: linear-gradient(135deg, rgb(var(--color-primary-900) / 0.16), transparent 46%);
 }
 
 .dashboard-stat-card > * {
@@ -738,7 +726,7 @@ onMounted(() => {
 }
 
 .dashboard-stat-card-primary {
-  border-color: rgba(249, 115, 22, 0.34);
+  border-color: rgb(var(--color-primary-500) / 0.34);
 }
 
 .dashboard-stat-card-blue,
@@ -746,6 +734,6 @@ onMounted(() => {
 .dashboard-stat-card-emerald,
 .dashboard-stat-card-teal,
 .dashboard-stat-card-rose {
-  border-color: rgba(251, 191, 36, 0.28);
+  border-color: rgb(203 213 225 / 0.7);
 }
 </style>

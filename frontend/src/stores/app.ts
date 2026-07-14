@@ -8,7 +8,52 @@ import { ref, computed } from 'vue'
 import type { Toast, ToastType, PublicSettings } from '@/types'
 import { i18n } from '@/i18n'
 import { getPublicSettings as fetchPublicSettingsAPI } from '@/api/auth'
-import { activeBrand } from '@/brand'
+import { activeBrand, withBrandIdentity } from '@/brand'
+
+const PUBLIC_SETTINGS_CACHE_KEY = 'sub2api_public_settings_cache_v3'
+const PUBLIC_SETTINGS_CACHE_TTL_MS = 5 * 60 * 1000
+const PUBLIC_SETTINGS_STALE_TTL_MS = 60 * 60 * 1000
+
+type PublicSettingsCacheRecord = {
+  savedAt: number
+  data: PublicSettings
+}
+
+function readPublicSettingsBrowserCache(maxAgeMs: number): PublicSettings | null {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const raw = window.localStorage.getItem(PUBLIC_SETTINGS_CACHE_KEY)
+    if (!raw) return null
+
+    const parsed = JSON.parse(raw) as Partial<PublicSettingsCacheRecord>
+    if (!parsed.data || typeof parsed.savedAt !== 'number') return null
+    if (Date.now() - parsed.savedAt > maxAgeMs) return null
+
+    return parsed.data
+  } catch {
+    window.localStorage.removeItem(PUBLIC_SETTINGS_CACHE_KEY)
+    return null
+  }
+}
+
+function writePublicSettingsBrowserCache(data: PublicSettings): void {
+  if (typeof window === 'undefined') return
+
+  try {
+    window.localStorage.setItem(PUBLIC_SETTINGS_CACHE_KEY, JSON.stringify({
+      savedAt: Date.now(),
+      data,
+    } satisfies PublicSettingsCacheRecord))
+  } catch {
+    // Storage may be unavailable or full; in-memory cache still works.
+  }
+}
+
+function clearPublicSettingsBrowserCache(): void {
+  if (typeof window === 'undefined') return
+  window.localStorage.removeItem(PUBLIC_SETTINGS_CACHE_KEY)
+}
 
 export const useAppStore = defineStore('app', () => {
   // ==================== State ====================
@@ -224,18 +269,20 @@ export const useAppStore = defineStore('app', () => {
   /**
    * Apply settings to store state (internal helper to avoid code duplication)
    */
-  function applySettings(config: PublicSettings): void {
+  function applySettings(config: PublicSettings): PublicSettings {
+    const brandedConfig = withBrandIdentity(config, activeBrand)
     if (typeof window !== 'undefined') {
-      window.__APP_CONFIG__ = { ...config }
+      window.__APP_CONFIG__ = { ...brandedConfig }
     }
-    cachedPublicSettings.value = config
-    siteName.value = config.site_name || activeBrand.siteName
-    siteLogo.value = config.site_logo || activeBrand.logo
-    siteVersion.value = config.version || ''
-    contactInfo.value = config.contact_info || ''
-    apiBaseUrl.value = config.api_base_url || ''
-    docUrl.value = config.doc_url || ''
+    cachedPublicSettings.value = brandedConfig
+    siteName.value = brandedConfig.site_name
+    siteLogo.value = brandedConfig.site_logo
+    siteVersion.value = brandedConfig.version || ''
+    contactInfo.value = brandedConfig.contact_info || ''
+    apiBaseUrl.value = brandedConfig.api_base_url || ''
+    docUrl.value = brandedConfig.doc_url || ''
     publicSettingsLoaded.value = true
+    return brandedConfig
   }
 
   /**
@@ -245,8 +292,9 @@ export const useAppStore = defineStore('app', () => {
   async function fetchPublicSettings(force = false): Promise<PublicSettings | null> {
     // Check for injected config from server (eliminates flash)
     if (!publicSettingsLoaded.value && !force && window.__APP_CONFIG__) {
-      applySettings(window.__APP_CONFIG__)
-      return window.__APP_CONFIG__
+      const config = applySettings(window.__APP_CONFIG__)
+      writePublicSettingsBrowserCache(config)
+      return config
     }
 
     // Return cached data if available and not forcing refresh
@@ -302,6 +350,22 @@ export const useAppStore = defineStore('app', () => {
       }
     }
 
+    if (!force) {
+      const freshCachedSettings = readPublicSettingsBrowserCache(PUBLIC_SETTINGS_CACHE_TTL_MS)
+      if (freshCachedSettings) {
+        return applySettings(freshCachedSettings)
+      }
+
+      const staleCachedSettings = readPublicSettingsBrowserCache(PUBLIC_SETTINGS_STALE_TTL_MS)
+      if (staleCachedSettings) {
+        const config = applySettings(staleCachedSettings)
+        if (!publicSettingsLoading.value) {
+          void fetchPublicSettings(true)
+        }
+        return config
+      }
+    }
+
     // Prevent duplicate requests
     if (publicSettingsLoading.value) {
       return null
@@ -310,8 +374,9 @@ export const useAppStore = defineStore('app', () => {
     publicSettingsLoading.value = true
     try {
       const data = await fetchPublicSettingsAPI()
-      applySettings(data)
-      return data
+      const config = applySettings(data)
+      writePublicSettingsBrowserCache(config)
+      return config
     } catch (error) {
       console.error('Failed to fetch public settings:', error)
       return null
@@ -326,6 +391,7 @@ export const useAppStore = defineStore('app', () => {
   function clearPublicSettingsCache(): void {
     publicSettingsLoaded.value = false
     cachedPublicSettings.value = null
+    clearPublicSettingsBrowserCache()
   }
 
   /**
@@ -335,7 +401,8 @@ export const useAppStore = defineStore('app', () => {
    */
   function initFromInjectedConfig(): boolean {
     if (window.__APP_CONFIG__) {
-      applySettings(window.__APP_CONFIG__)
+      const config = applySettings(window.__APP_CONFIG__)
+      writePublicSettingsBrowserCache(config)
       return true
     }
     return false

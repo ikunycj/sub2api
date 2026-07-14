@@ -1,21 +1,24 @@
-import { anytokenBrand } from './anytoken'
-import { ikunBrand } from './ikun'
-import type { BrandConfig, BrandKey } from '../types'
+import { DEFAULT_BRAND_ENV, PRIMARY_COLOR_SCHEMES } from '../palettes'
+import type { BrandPrimaryScheme } from '../palettes'
+import type { BrandConfig, BrandEnvironmentConfig } from '../types'
 
-export const DEFAULT_BRAND: BrandKey = 'ikun'
+export { sharedBrandContent } from './shared'
+export { DEFAULT_BRAND_ENV, PRIMARY_COLOR_SCHEMES } from '../palettes'
 
-export const brandConfigs = {
-  ikun: ikunBrand,
-  anytoken: anytokenBrand,
-} satisfies Record<BrandKey, BrandConfig>
+export function resolveBrandConfig(input: BrandEnvironmentConfig = {}): BrandConfig {
+  const siteName = input.siteName?.trim() || DEFAULT_BRAND_ENV.siteName
+  const logo = input.logo?.trim() || DEFAULT_BRAND_ENV.logo
+  const primaryScheme = (input.primaryScheme?.trim().toLowerCase() || DEFAULT_BRAND_ENV.primaryScheme) as BrandPrimaryScheme
+  const primary = PRIMARY_COLOR_SCHEMES[primaryScheme]
 
-export function resolveBrandConfig(value?: string): BrandConfig {
-  const normalized = (value || DEFAULT_BRAND).trim().toLowerCase()
-
-  if (normalized in brandConfigs) {
-    return brandConfigs[normalized as BrandKey]
+  if (!primary) {
+    throw new Error(`Unsupported VITE_PRIMARY_SCHEME "${input.primaryScheme}". Supported schemes: ${Object.keys(PRIMARY_COLOR_SCHEMES).join(', ')}`)
   }
 
-  const supportedBrands = Object.keys(brandConfigs).join(', ')
-  throw new Error(`Unsupported VITE_BRAND "${value}". Supported brands: ${supportedBrands}`)
+  return {
+    siteName,
+    logo,
+    primaryScheme,
+    theme: { primary },
+  }
 }

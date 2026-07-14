@@ -1,7 +1,8 @@
-export type BrandKey = 'ikun' | 'anytoken'
+import type { BrandColorScale, BrandPrimaryScheme } from './palettes'
+
+export type { BrandColorScale, BrandColorStep, BrandPrimaryScheme } from './palettes'
+
 export type LocaleKey = 'zh' | 'en'
-export type BrandColorStep = '50' | '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900' | '950'
-export type BrandColorScale = Record<BrandColorStep, string>
 
 export interface BrandTheme {
   primary: BrandColorScale
@@ -119,17 +120,19 @@ export interface HomeCopy {
 }
 
 export interface BrandConfig {
-  key: BrandKey
   siteName: string
-  shortName: string
-  domain: string
-  apiBaseUrl: string
-  apiKeyEnvVar: string
   logo: string
-  favicon: string
-  logoInitial: string
-  titleSuffix: string
+  primaryScheme: BrandPrimaryScheme
   theme: BrandTheme
+}
+
+export interface BrandEnvironmentConfig {
+  siteName?: string
+  logo?: string
+  primaryScheme?: string
+}
+
+export interface SharedBrandContent {
   publicLayout: Record<LocaleKey, PublicLayoutCopy>
   home: Record<LocaleKey, HomeCopy>
 }

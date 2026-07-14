@@ -505,6 +505,7 @@ import EndpointDistributionChart from '@/components/charts/EndpointDistributionC
 import Icon from '@/components/icons/Icon.vue'
 import { adminAPI } from '@/api/admin'
 import type { Account, AccountUsageStatsResponse } from '@/types'
+import { activeBrand, hexToRgba } from '@/brand'
 
 ChartJS.register(
   CategoryScale,
@@ -571,8 +572,8 @@ const trendChartData = computed(() => {
       {
         label: t('admin.accounts.stats.requests'),
         data: stats.value.history.map((h) => h.requests),
-        borderColor: '#f97316',
-        backgroundColor: 'rgba(249, 115, 22, 0.1)',
+        borderColor: activeBrand.theme.primary['500'],
+        backgroundColor: hexToRgba(activeBrand.theme.primary['500'], 0.1),
         fill: false,
         tension: 0.3,
         yAxisID: 'y1'
@@ -660,7 +661,7 @@ const lineChartOptions = computed(() => ({
         drawOnChartArea: false
       },
       ticks: {
-        color: '#f97316',
+        color: activeBrand.theme.primary['500'],
         font: {
           size: 10
         },
@@ -669,7 +670,7 @@ const lineChartOptions = computed(() => ({
       title: {
         display: true,
         text: t('admin.accounts.stats.requests'),
-        color: '#f97316',
+        color: activeBrand.theme.primary['500'],
         font: {
           size: 11
         }

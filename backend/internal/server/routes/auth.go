@@ -217,6 +217,12 @@ func RegisterAuthRoutes(
 		settings.GET("/email-unsubscribe", h.Setting.UnsubscribeNotificationEmail)
 	}
 
+	// 公开模型目录（无需认证）：仅暴露标准（余额）公开分组及对应可用模型。
+	models := v1.Group("/models")
+	{
+		models.GET("/catalog", h.AvailableChannel.ListPublicModelCatalog)
+	}
+
 	// 需要认证的当前用户信息
 	authenticated := v1.Group("")
 	authenticated.Use(gin.HandlerFunc(jwtAuth))

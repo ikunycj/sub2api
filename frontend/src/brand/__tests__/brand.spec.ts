@@ -1,48 +1,90 @@
 import { describe, expect, it } from 'vitest'
-import { brandConfigs, resolveBrandConfig, withBrandTokens } from '@/brand'
+import {
+  getBrandChartPalette,
+  getBrandSlug,
+  resolveBrandConfig,
+  sharedBrandContent,
+  withBrandIdentity,
+  withBrandTokens,
+} from '@/brand'
 import { getBrandCssVariables } from '@/brand/theme'
 
-describe('brand config', () => {
-  it('defaults to ikun when VITE_BRAND is not provided', () => {
-    expect(resolveBrandConfig().key).toBe('ikun')
+const ikun = resolveBrandConfig({
+  siteName: 'ikun.love',
+  logo: '/logo.png',
+  primaryScheme: 'orange',
+})
+
+const anytoken = resolveBrandConfig({
+  siteName: 'AnyToken',
+  logo: '/brands/anytoken/logo.svg',
+  primaryScheme: 'blue',
+})
+
+describe('site brand config', () => {
+  it('uses the original ikun identity and palette by default', () => {
+    expect(resolveBrandConfig()).toEqual(ikun)
+    expect(ikun.theme.primary['500']).toBe('#f97316')
   })
 
-  it('resolves supported brands and rejects unsupported values', () => {
-    expect(resolveBrandConfig('ikun').siteName).toBe('ikun.love')
-    expect(resolveBrandConfig('anytoken').siteName).toBe('AnyToken')
-    expect(() => resolveBrandConfig('unknown')).toThrow(/Unsupported VITE_BRAND/)
+  it('accepts only a supported primary scheme', () => {
+    expect(anytoken.theme.primary['500']).toBe('#2563eb')
+    expect(() => resolveBrandConfig({ primaryScheme: 'unknown' })).toThrow(
+      /Unsupported VITE_PRIMARY_SCHEME/,
+    )
   })
 
-  it('keeps every brand self-contained', () => {
-    Object.values(brandConfigs).forEach((brand) => {
-      expect(brand.logo).toBe(`/brands/${brand.key}/logo.svg`)
-      expect(brand.favicon).toBe(`/brands/${brand.key}/logo.svg`)
-      expect(brand.publicLayout.zh.start).toBeTruthy()
-      expect(brand.publicLayout.en.start).toBeTruthy()
-      expect(brand.home.zh.hero.title).toBeTruthy()
-      expect(brand.home.en.hero.title).toBeTruthy()
-      expect(Object.keys(brand.theme.primary)).toHaveLength(11)
+  it('contains no per-site page, domain, secondary color, or feature config', () => {
+    expect(Object.keys(ikun).sort()).toEqual(['logo', 'primaryScheme', 'siteName', 'theme'])
+    expect(Object.keys(anytoken).sort()).toEqual(['logo', 'primaryScheme', 'siteName', 'theme'])
+    expect(Object.keys(ikun.theme)).toEqual(['primary'])
+    expect(Object.keys(anytoken.theme)).toEqual(['primary'])
+  })
+
+  it('exposes only the selected primary palette as runtime CSS variables', () => {
+    expect(getBrandCssVariables(ikun)['--color-primary-500']).toBe('249 115 22')
+    expect(getBrandCssVariables(anytoken)['--color-primary-500']).toBe('37 99 235')
+    expect(Object.keys(getBrandCssVariables(ikun)).some((key) => key.includes('secondary'))).toBe(false)
+  })
+
+  it('keeps backend settings from overriding the configured name and logo', () => {
+    expect(withBrandIdentity({ site_name: 'backend', site_logo: '/backend.png' }, ikun)).toEqual({
+      site_name: 'ikun.love',
+      site_logo: '/logo.png',
     })
   })
 
-  it('exposes primary colors as CSS variable channel values', () => {
-    expect(getBrandCssVariables(brandConfigs.ikun)['--color-primary-500']).toBe('249 115 22')
-    expect(getBrandCssVariables(brandConfigs.anytoken)['--color-primary-500']).toBe('37 99 235')
-  })
-
-  it('keeps shared model/docs pages brand-aware through token replacement', () => {
-    const text = 'AnyToken uses https://api.anytoken.com/v1 with ANYTOKEN_API_KEY on anytoken.com.'
-    expect(withBrandTokens(text, brandConfigs.ikun)).toBe(
-      'ikun.love uses https://ikun.love/v1 with IKUN_API_KEY on ikun.love.'
-    )
-    expect(withBrandTokens(text, brandConfigs.anytoken)).toBe(
-      'AnyToken uses https://api.anytoken.com/v1 with ANYTOKEN_API_KEY on anytoken.com.'
+  it('changes only the two primary shades in the shared chart palette', () => {
+    const ikunPalette = getBrandChartPalette(ikun)
+    const anytokenPalette = getBrandChartPalette(anytoken)
+    expect(ikunPalette[0]).toBe('#f97316')
+    expect(anytokenPalette[0]).toBe('#2563eb')
+    expect(ikunPalette[9]).toBe('#ea580c')
+    expect(anytokenPalette[9]).toBe('#1d4ed8')
+    expect(ikunPalette.filter((_, index) => ![0, 9].includes(index))).toEqual(
+      anytokenPalette.filter((_, index) => ![0, 9].includes(index)),
     )
   })
 
-  it('lets only brand copy differ while the home component stays shared', () => {
-    expect(brandConfigs.ikun.home.zh.hero.title).not.toBe(brandConfigs.anytoken.home.zh.hero.title)
-    expect(brandConfigs.ikun.home.zh.hero.secondaryCta).toBeTruthy()
-    expect(brandConfigs.anytoken.home.zh.hero.secondaryCta).toBeTruthy()
+  it('renders the same shared copy with only runtime identity and endpoint tokens changed', () => {
+    const template = 'AnyToken uses https://api.anytoken.com/v1 with ANYTOKEN_API_KEY.'
+    const expectedEndpoint = `${window.location.origin}/v1`
+
+    expect(withBrandTokens(template, ikun)).toBe(
+      `ikun.love uses ${expectedEndpoint} with SITE_API_KEY.`,
+    )
+    expect(withBrandTokens(template, anytoken)).toBe(
+      `AnyToken uses ${expectedEndpoint} with SITE_API_KEY.`,
+    )
+    expect(getBrandSlug(ikun)).toBe('ikun_love')
+    expect(getBrandSlug(anytoken)).toBe('anytoken')
+  })
+
+  it('keeps one shared homepage and public-layout content tree', () => {
+    const copy = JSON.stringify(sharedBrandContent)
+    expect(copy).toContain('OpenAI')
+    expect(copy).toContain('Claude')
+    expect(copy).toContain('1/50')
+    expect(copy).not.toMatch(/Gemini|DeepSeek|Qwen|Bytedance|ElevenLabs|Minimax|Kling|Vidu|Grok|Runway/)
   })
 })

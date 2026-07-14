@@ -94,6 +94,7 @@ function simulateGuard(
       ]
       const pendingAuthPaths = ['/register', '/email-verify']
       const isAllowed =
+        toPath === '/' ||
         allowed.some((path) => toPath === path || toPath.startsWith(path)) ||
         callbackPaths.includes(toPath) ||
         (authState.hasPendingAuthSession && pendingAuthPaths.includes(toPath))
@@ -143,6 +144,7 @@ function simulateGuard(
     ]
     const pendingAuthPaths = ['/register', '/email-verify']
     const isAllowed =
+      toPath === '/' ||
       allowed.some((path) => toPath === path || toPath.startsWith(path)) ||
       callbackPaths.includes(toPath) ||
       (authState.hasPendingAuthSession && pendingAuthPaths.includes(toPath))
@@ -187,6 +189,11 @@ describe('路由守卫逻辑', () => {
 
     it('访问 /home 公开页面允许通过', () => {
       const redirect = simulateGuard('/home', { requiresAuth: false }, authState)
+      expect(redirect).toBeNull()
+    })
+
+    it('访问 / 根目录公开页面允许通过', () => {
+      const redirect = simulateGuard('/', { requiresAuth: false }, authState)
       expect(redirect).toBeNull()
     })
   })
@@ -344,6 +351,7 @@ describe('路由守卫逻辑', () => {
         backendModeEnabled: true,
         hasPendingAuthSession: false,
       }
+      expect(simulateGuard('/', { requiresAuth: false }, authState)).toBeNull()
       expect(simulateGuard('/home', { requiresAuth: false }, authState)).toBeNull()
       expect(simulateGuard('/models', { requiresAuth: false }, authState)).toBeNull()
       expect(simulateGuard('/docs', { requiresAuth: false }, authState)).toBeNull()

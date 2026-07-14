@@ -370,6 +370,106 @@ func TestAPIContracts(t *testing.T) {
 			}`,
 		},
 		{
+			name: "GET /api/v1/models/catalog",
+			setup: func(t *testing.T, deps *contractDeps) {
+				t.Helper()
+				deps.groupRepo.SetActive([]service.Group{
+					{
+						ID:               10,
+						Name:             "ChatGPT Plus",
+						Platform:         service.PlatformOpenAI,
+						RateMultiplier:   1.5,
+						IsExclusive:      false,
+						Status:           service.StatusActive,
+						SubscriptionType: service.SubscriptionTypeStandard,
+						ModelsListConfig: service.GroupModelsListConfig{
+							Enabled: true,
+							Models:  []string{" gpt-4o ", "gpt-4o", "o3"},
+						},
+					},
+					{
+						ID:               11,
+						Name:             "ChatGPT Pro",
+						Platform:         service.PlatformOpenAI,
+						Status:           service.StatusActive,
+						SubscriptionType: service.SubscriptionTypeStandard,
+						IsExclusive:      true,
+						ModelsListConfig: service.GroupModelsListConfig{
+							Enabled: true,
+							Models:  []string{"gpt-5"},
+						},
+					},
+					{
+						ID:               12,
+						Name:             "Subscription",
+						Platform:         service.PlatformOpenAI,
+						Status:           service.StatusActive,
+						SubscriptionType: service.SubscriptionTypeSubscription,
+						ModelsListConfig: service.GroupModelsListConfig{
+							Enabled: true,
+							Models:  []string{"gpt-4.1"},
+						},
+					},
+					{
+						ID:               13,
+						Name:             "Custom List Disabled",
+						Platform:         service.PlatformAnthropic,
+						Status:           service.StatusActive,
+						SubscriptionType: service.SubscriptionTypeStandard,
+						ModelsListConfig: service.GroupModelsListConfig{
+							Enabled: false,
+							Models:  []string{"claude-sonnet-4-6"},
+						},
+					},
+				})
+			},
+			method:     http.MethodGet,
+			path:       "/api/v1/models/catalog",
+			wantStatus: http.StatusOK,
+			wantJSON: `{
+				"code": 0,
+				"message": "success",
+				"data": {
+					"groups": [
+						{
+							"id": 10,
+							"name": "ChatGPT Plus",
+							"platform": "openai",
+							"rate_multiplier": 1.5,
+							"models": [
+								{
+									"name": "gpt-4o",
+									"platform": "openai",
+									"pricing": null,
+									"official_pricing": null
+								},
+								{
+									"name": "o3",
+									"platform": "openai",
+									"pricing": null,
+									"official_pricing": null
+								}
+							]
+						},
+						{
+							"id": 13,
+							"name": "Custom List Disabled",
+							"platform": "anthropic",
+							"rate_multiplier": 0,
+							"models": [
+								{
+									"name": "claude-sonnet-4-6",
+									"platform": "anthropic",
+									"pricing": null,
+									"official_pricing": null
+								}
+							]
+						}
+					]
+				}
+			}`,
+		},
+		{
 			name: "GET /api/v1/subscriptions",
 			setup: func(t *testing.T, deps *contractDeps) {
 				t.Helper()
@@ -1281,6 +1381,7 @@ func newContractDeps(t *testing.T) *contractDeps {
 
 	userService := service.NewUserService(userRepo, nil, nil, nil)
 	apiKeyService := service.NewAPIKeyService(apiKeyRepo, userRepo, groupRepo, userSubRepo, nil, apiKeyCache, cfg)
+	groupService := service.NewGroupService(groupRepo, nil)
 
 	usageRepo := newStubUsageLogRepo()
 	usageService := service.NewUsageService(usageRepo, userRepo, nil, nil)
@@ -1298,6 +1399,7 @@ func newContractDeps(t *testing.T) *contractDeps {
 	authHandler := handler.NewAuthHandler(cfg, nil, userService, settingService, nil, redeemService, nil, nil)
 	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyService)
 	usageHandler := handler.NewUsageHandler(usageService, apiKeyService, nil, nil)
+	availableChannelHandler := handler.NewAvailableChannelHandler(nil, apiKeyService, settingService, groupService, nil)
 	adminSettingHandler := adminhandler.NewSettingHandler(settingService, nil, nil, nil, nil, nil, nil)
 	adminAccountHandler := adminhandler.NewAccountHandler(adminService, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
@@ -1331,6 +1433,7 @@ func newContractDeps(t *testing.T) *contractDeps {
 	v1Keys.GET("/keys", apiKeyHandler.List)
 	v1Keys.POST("/keys", apiKeyHandler.Create)
 	v1Keys.GET("/groups/available", apiKeyHandler.GetAvailableGroups)
+	v1.GET("/models/catalog", availableChannelHandler.ListPublicModelCatalog)
 
 	v1Usage := v1.Group("")
 	v1Usage.Use(jwtAuth)
